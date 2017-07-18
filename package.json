@@ -1,0 +1,45 @@
+{
+  "name": "fastmq",
+  "version": "1.0.0",
+  "description": "High performance message broker implementation for node.js with multiple network transports support.",
+  "keywords": [
+    "message broker",
+    "ipc",
+    "queue"
+  ],
+  "engines": {
+    "node": ">=4.8.3"
+  },
+  "main": "lib/index.js",
+  "author": "Arlo Liu <arlo.liu@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arloliu/fastmq"
+  },
+  "bugs": {
+    "type": "git",
+    "url": "https://github.com/arloliu/fastmq/issues"
+  },
+  "homepage": "https://github.com/arloliu/fastmq",
+  "scripts": {
+    "build": "webpack",
+    "eslint": "eslint src"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "double-ended-queue": "^2.1.0-0",
+    "eslint": "^4.2.0",
+    "eventemitter3": "^2.0.3",
+    "glob-to-regexp": "^0.3.0",
+    "node-int64": "^0.4.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.25.0",
+    "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.1.1",
+    "babel-preset-env": "^1.6.0",
+    "mocha": "^3.4.2",
+    "webpack": "^3.3.0"
+  }
+}

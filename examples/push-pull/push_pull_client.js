@@ -1,0 +1,71 @@
+const MessageBroker = require('../../lib/index.js');
+const serverChannel = 'master';
+var pullChannel1;
+var pullChannel2;
+var pushChannel;
+var pushItemsId;
+
+var itemCount = 0;
+function pushItems(channel)
+{
+    const data = [];
+
+    for (let i = 0; i < 1000; i++)
+    {
+        itemCount++;
+        data.push({data: `item${itemCount}`});
+    }
+    channel.push('pullChannel.*', 'testPushPullTopic', data);
+}
+
+
+
+// const server = new MessageBroker.Server(serverChannel);
+// server.start()
+Promise.resolve()
+.then(() => {
+    //console.log('Message broker server started.');
+    return MessageBroker.Client.connect('pullChannel.1', serverChannel);
+})
+.then((ch) => {
+    pullChannel1 = ch;
+    console.log('push_client1 connected.');
+    return pullChannel1.pull('testPushPullTopic', {prefetch: 2}, (msg) => {
+        console.log(`# pullChannel1, msg.id: ${msg.header.id}, payload:`, msg.payload);
+    });
+})
+.then(() => {
+    return MessageBroker.Client.connect('pullChannel.2', serverChannel);
+})
+.then((ch) => {
+    pullChannel2 = ch;
+    console.log('push_client2 connected.');
+    return pullChannel2.pull('testPushPullTopic', {prefetch: 3}, (msg) => {
+        console.log(`# pullChannel2, msg.id: ${msg.header.id}, payload:`, msg.payload);
+        return Promise.resolve();
+    });
+})
+.then(() => {
+    return MessageBroker.Client.connect('pushChannel', serverChannel);
+})
+.then((ch) => {
+    pushChannel = ch;
+    pushItemsId = setInterval(pushItems, 300, pushChannel);
+})
+.catch((err) => {
+    console.log('Got rejection:', err.stack);
+});
+
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection at: Promise', p, '\n\nReason:', reason);
+    // application specific logging, throwing an error, or other logic here
+});
+
+process.on('SIGINT', () => {
+    if (pushItemsId)
+        clearInterval(pushItemsId);
+    pullChannel1.disconnect();
+    pullChannel2.disconnect();
+    pushChannel.disconnect();
+});
