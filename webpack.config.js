@@ -20,6 +20,7 @@ const config = {
         Client: './Client.js',
         Server: './Server.js',
         Message: './Message.js',
+        Response: './Response.js',
     },
 
     output: {
