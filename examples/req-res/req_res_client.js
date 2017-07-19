@@ -1,10 +1,10 @@
 const Promise = require('bluebird');
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 
 var reqChannel;
 var resChannel;
 
-MessageBroker.Client.connect('res_client', 'master')
+FastMQ.Client.connect('res_client', 'master')
 .then((channel) => {
     resChannel = channel;
     channel.response('test_json', (req, res) => {
@@ -14,7 +14,7 @@ MessageBroker.Client.connect('res_client', 'master')
     });
 })
 .then(() => {
-    return MessageBroker.Client.connect('req_client', 'master');
+    return FastMQ.Client.connect('req_client', 'master');
 })
 .then((ch) => {
     reqChannel = ch;

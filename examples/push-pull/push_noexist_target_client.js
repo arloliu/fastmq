@@ -1,7 +1,7 @@
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 const serverChannel = 'master';
 var pushChannel;
-MessageBroker.Client.connect('pushChannel', serverChannel)
+FastMQ.Client.connect('pushChannel', serverChannel)
 .then((ch) => {
     pushChannel = ch;
     const data1 = [];

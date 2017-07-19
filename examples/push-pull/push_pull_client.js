@@ -1,4 +1,4 @@
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 const serverChannel = 'master';
 var pullChannel1;
 var pullChannel2;
@@ -20,12 +20,12 @@ function pushItems(channel)
 
 
 
-// const server = new MessageBroker.Server(serverChannel);
+// const server = new FastMQ.Server(serverChannel);
 // server.start()
 Promise.resolve()
 .then(() => {
     //console.log('Message broker server started.');
-    return MessageBroker.Client.connect('pullChannel.1', serverChannel);
+    return FastMQ.Client.connect('pullChannel.1', serverChannel);
 })
 .then((ch) => {
     pullChannel1 = ch;
@@ -35,18 +35,18 @@ Promise.resolve()
     });
 })
 .then(() => {
-    return MessageBroker.Client.connect('pullChannel.2', serverChannel);
+    return FastMQ.Client.connect('pullChannel.2', serverChannel);
 })
 .then((ch) => {
     pullChannel2 = ch;
     console.log('push_client2 connected.');
-    return pullChannel2.pull('testPushPullTopic', {prefetch: 3}, (msg) => {
+    pullChannel2.pull('testPushPullTopic', {prefetch: 3}, (msg) => {
         console.log(`# pullChannel2, msg.id: ${msg.header.id}, payload:`, msg.payload);
         return Promise.resolve();
     });
 })
 .then(() => {
-    return MessageBroker.Client.connect('pushChannel', serverChannel);
+    return FastMQ.Client.connect('pushChannel', serverChannel);
 })
 .then((ch) => {
     pushChannel = ch;

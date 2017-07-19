@@ -1,6 +1,6 @@
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 
-const server = MessageBroker.Server.create('master');
+const server = FastMQ.Server.create('master');
 
 server.response('test_cmd_json', (msg, res) => {
     let resData = {num: msg.payload.num + 1};

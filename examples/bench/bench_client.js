@@ -1,5 +1,5 @@
 const Promise = require('bluebird');
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 const ParallelBenchmark = require('./ParallelBenchmark');
 var parseArgs = require('minimist');
 const options = parseArgs(process.argv.slice(2));
@@ -12,7 +12,7 @@ const bench1 = new ParallelBenchmark('test_cmd_json', {
     requests: Requests,
     setup: function() {
         this.number = 1;
-        return MessageBroker.Client.connect('client1', 'master')
+        return FastMQ.Client.connect('client1', 'master')
         .then((ch) => {
             this.channel = ch;
         });
@@ -39,7 +39,7 @@ const bench2 = new ParallelBenchmark('test_cmd_raw_1k', {
     requests: Requests,
     setup: function() {
         this.rawData = Buffer.allocUnsafe(1024);
-        return MessageBroker.Client.connect('client1', 'master')
+        return FastMQ.Client.connect('client1', 'master')
         .then((ch) => {
             this.channel = ch;
         });

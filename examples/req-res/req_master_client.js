@@ -1,9 +1,9 @@
-const MessageBroker = require('../../lib/index.js');
+const FastMQ = require('../../lib/index.js');
 
 var channel;
 
 let reqData = {num: 1, data: 'test'};
-MessageBroker.Client.connect('client1', 'master', (err, ch) => {
+FastMQ.Client.connect('client1', 'master', (err, ch) => {
     channel = ch;
     channel.request('master', 'test_cmd_json', reqData, 'json')
     .then((res) => {
