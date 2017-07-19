@@ -5,7 +5,7 @@ const os = require('os');
 exports.toNumber = function(x) { return (x = Number(x)) >= 0 ? x : false; };
 exports.getSocketPath = function(channel)
 {
-    let pipePath = path.resolve(os.tmpdir(), `.adm.mq.${channel}`);
+    let pipePath = path.resolve(os.tmpdir(), `.fast.mq.${channel}`);
 
     // use windows named pipe
     if (process.platform === 'win32')

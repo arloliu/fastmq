@@ -25,6 +25,7 @@ class Channel
         this._responseEvent = new EventEmitter();
         this._subEvent = new EventEmitter();
         this._pullEvent = new EventEmitter();
+        this._errorEvent = new EventEmitter();
 
         this._msgReceiver = new MessageReceiver();
         this._msgReceiver.on('message', (msg, rawBuf, socket) => {
@@ -50,11 +51,23 @@ class Channel
         });
         this._msgReceiver.on('error', (err) => {
             debug('Message receiver got error:', err.stack);
+            this._errorEvent.emit('error', err);
         });
 
         this._socket.on('data', (chunk) => {
             this._msgReceiver.recv(chunk, this._socket);
         });
+        this._socket.on('error', (err) => {
+            this._errorEvent.emit('error', err);
+        });
+    }
+
+    onError(listener)
+    {
+        if (listener === undefined || typeof listener !== 'function')
+            throw new TypeError('Listener must be a function.');
+
+        this._errorEvent.on('error', listener);
     }
 
     disconnect()
@@ -92,21 +105,27 @@ class Channel
         });
     }
 
-    serverRequest(topic, data = {}, contentType = 'json')
+    _serverRequest(topic, data = {}, contentType = 'json')
     {
         return this.request(this.serverChannel, topic, data, contentType);
     }
 
     response(topic, listener)
     {
-        // register this request listener to server
-        this.serverRequest('addResponseListener', {topic: topic}, 'json')
-        .then((msg) => {
-            debug(`addResponseListener topic: ${topic}, result: ${msg.payload.result}`);
-            this._requestEvent.on(topic, (reqMsg, res) => {
-                listener(reqMsg, res);
-            });
+        this._requestEvent.on(topic, (reqMsg, res) => {
+            listener(reqMsg, res);
         });
+        // register this request listener to server
+        this._serverRequest('addResponseListener', {topic: topic}, 'json')
+        .then((resMsg) => {
+            debug(`addResponseListener topic: ${topic}, result: ${resMsg.payload.result}`);
+            if (resMsg.isError('REGISTER_FAIL'))
+            {
+                this._requestEvent.removeAllListeners(topic);
+                this._errorEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
+            }
+        });
+        return this;
     }
 
     push(target, topic, items, contentType = 'json')
@@ -141,30 +160,17 @@ class Channel
             Promise.resolve(listener(msg)).then(() => {
                 this._sendAck(msg.header.id, topic);
             });
-            // if (isPromise(listener))
-            // {
-            //     debug(`pull ${topic} listener is promise function.`);
-            //     listener(msg).then(() => {
-            //         this._sendAck(msg.header.id, topic);
-            //     });
-            // }
-            // else
-            // {
-            //     debug(`pull ${topic} listener is NOT promise function.`);
-            //     listener(msg);
-            //     this._sendAck(msg.header.id, topic);
-            // }
         });
 
-        return this.serverRequest('addPullListener', regPayload, 'json')
+        this._serverRequest('addPullListener', regPayload, 'json')
         .then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL'))
             {
                 this._pullEvent.removeAllListeners(topic);
-                return Promise.reject(new Error(`Register pull listener for topic: ${topic} fail`));
+                this._errorEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
             }
-            return Promise.resolve();
         });
+        return this;
     }
 
     publish(target, topic, data, contentType = 'json')
@@ -195,17 +201,16 @@ class Channel
             listener(msg);
         });
 
-        return this.serverRequest('addSubscribeListener', regPayload, 'json')
+        this._serverRequest('addSubscribeListener', regPayload, 'json')
         .then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL'))
             {
                 this._subEvent.removeAllListeners(topic);
-                return Promise.reject(new Error(`Register subscribe listener for topic: ${topic} fail`));
+                this._errorEvent.emit('error', new Error(`Register subscribe listener for topic: ${topic} fail`));
             }
-            return Promise.resolve();
         });
+        return this;
     }
-
 
     _sendAck(id, topic)
     {
@@ -219,7 +224,7 @@ class Channel
 
 function _registerChannel(channel, serverChannel)
 {
-    return channel.serverRequest('register')
+    return channel._serverRequest('register')
     .then((msg) => {
         if (msg.header.error)
         {

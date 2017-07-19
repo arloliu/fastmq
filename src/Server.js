@@ -253,9 +253,10 @@ class Server
     response(topic, listener)
     {
         this._channels.addResponse(this.channel, topic);
-        return this._requestEvent.on(topic, (msg, res) => {
+        this._requestEvent.on(topic, (msg, res) => {
             listener(msg, res);
         });
+        return this;
     }
 
     _forwardRequestMessage(reqMsg, rawReqBuf, sourceSocket)
@@ -330,7 +331,10 @@ class Server
             // unregister channel
             let channel = this._channels.unregisterBySocket(socket);
             if (channel)
+            {
+                this._queues.removeChannels(channel);
                 debug(`Un-register channel '${channel}'`);
+            }
 
         });
     }
@@ -363,6 +367,10 @@ class Server
             setTimeout(() => {
                 this._server.listen(this._serverOptions);
             }, 300);
+        }
+        else
+        {
+            debug('Message broker server got error:', error.stack);
         }
     }
 }

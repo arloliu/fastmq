@@ -72,6 +72,9 @@ class TaskQueue
                this._channels.splice(i, 1);
             }
         }
+
+        if (this._channelIndex >= this._channels.length)
+            this._channelIndex = 0;
     }
 
     enqueue(data, targetRegExp, contentType)
@@ -106,7 +109,7 @@ class TaskQueue
                     contentType: task.contentType,
                     data: task.data
                 };
-                debug('redeliver task id:', redeliverTask);
+                debug('redeliver task:', redeliverTask);
                 this._taskQueue.enqueue(redeliverTask);
 
                 delete this._nonAckTasks[id];
@@ -200,6 +203,7 @@ class TaskQueue
                     targetRegExp: item.targetRegExp,
                     contentType: item.contentType,
                     channel: channel.name,
+                    data: item.data
                 };
                 this._nonAckTasks[item.id] = nonAckItem;
             }
