@@ -1,0 +1,11 @@
+{
+	"folders":
+	[
+		{
+            "foler_exclude_patterns": [
+                "node_modules"
+            ],
+			"path": "."
+		}
+	]
+}
