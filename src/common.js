@@ -10,8 +10,8 @@ exports.getSocketPath = function(channel)
     // use windows named pipe
     if (process.platform === 'win32')
     {
-        pipePath = path.replace(/^\//, '');
-        pipePath = path.replace(/\//g, '-');
+        pipePath = pipePath.replace(/^\//, '');
+        pipePath = pipePath.replace(/\//g, '-');
         pipePath = `\\\\.\\pipe\\${pipePath}`;
     }
     return pipePath;
