@@ -1,6 +1,6 @@
 {
   "name": "fastmq",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "High performance message broker implementation for node.js with multiple network transports support.",
   "keywords": [
     "message",
