@@ -1,20 +1,20 @@
 const path = require('path');
-const webpack = require('webpack');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const BASE_PATH = path.resolve(__dirname);
 
 const nodeModules = {};
-require('fs').readdirSync(path.resolve(__dirname, 'node_modules'))
-    .filter(function(x) {
+require('fs')
+    .readdirSync(path.resolve(__dirname, 'node_modules'))
+    .filter((x) => {
         return ['.bin'].indexOf(x) === -1;
     })
-    .forEach(function(mod) {
+    .forEach((mod) => {
         nodeModules[mod] = 'commonjs2 ' + mod;
-});
+    });
 
 const config = {
     name: 'fastmq',
     target: 'node',
+    mode: 'production',
     context: path.join(BASE_PATH, 'src'),
     entry: {
         Client: './Client.js',
@@ -26,7 +26,7 @@ const config = {
     output: {
         path: path.join(BASE_PATH, 'lib'),
         filename: '[name].js',
-        libraryTarget: 'commonjs2'
+        libraryTarget: 'commonjs2',
     },
 
     resolve: {
@@ -41,9 +41,7 @@ const config = {
             {
                 test: /\.js?$/,
                 loader: 'babel-loader',
-                exclude: [
-                    path.resolve( __dirname, '../node_modules' ),
-                ],
+                exclude: [path.resolve(__dirname, '../node_modules')],
                 options: {
                     // https://github.com/babel/babel-loader#options
                     cacheDirectory: true,
@@ -55,11 +53,9 @@ const config = {
         ],
     },
 
-    plugins: [
-        new webpack.optimize.UglifyJsPlugin({
-            beautify: false
-        })
-    ],
+    optimization: {
+        minimize: false,
+    },
 
     node: {
         console: false,
@@ -70,23 +66,16 @@ const config = {
         __dirname: false,
     },
 
-    //devtool: 'source-map',
+    // devtool: 'source-map',
     cache: true,
     stats: {
         colors: true,
-        stats: true,
-        children: true,
+        reasons: false,
         version: true,
         timings: true,
-        reasons: false,
-        hash: false,
         chunks: false,
         chunkModules: false,
-        chunkOrigins: false,
-        cached: false,
-        cachedAssets: false,
-        source: false,
-    }
+    },
 };
 
 module.exports = config;

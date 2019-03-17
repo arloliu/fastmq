@@ -1,10 +1,15 @@
 {
   "presets": [
-    ["env", {
+    ["@babel/preset-env", {
         "targets": {
-            "node": "4.8.3",
+            "node": "4.8.0",
         }
     }]
   ],
-  "plugins": ["transform-es2015-template-literals"]
+  "plugins": [
+    "@babel/plugin-transform-template-literals",
+    "@babel/plugin-transform-async-to-generator",
+    "@babel/plugin-transform-modules-commonjs",
+    "@babel/plugin-transform-runtime"
+  ]
 }
