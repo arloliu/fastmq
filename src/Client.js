@@ -7,8 +7,10 @@ const EventEmitter = require('eventemitter3');
 const Message = require('./Message.js');
 const Response = require('./Response.js');
 const MessageReceiver = require('./MessageReceiver.js');
-const getSocketPath = require('./common.js').getSocketPath;
 const util = require('util');
+const common = require('./common.js');
+const getSocketPath = common.getSocketPath;
+const toNumber = common.toNumber;
 const debug = util.debuglog('fastmq');
 
 class Channel {
