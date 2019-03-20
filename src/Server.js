@@ -14,6 +14,7 @@ const ChannelManager = require('./ChannelManager.js');
 const ErrorCode = require('./ErrorCode.js');
 const common = require('./common.js');
 const getSocketPath = common.getSocketPath;
+const uniqid = common.uniqid;
 const util = require('util');
 const debug = util.debuglog('fastmq');
 
@@ -126,9 +127,18 @@ class Server {
     _setupRequestHandlers() {
         // setup internal request handlers
         this._requestHandlers.register = (msg, res) => {
-            const srcChannel = msg.header.source;
+            let srcChannel = msg.header.source;
             const socket = res.socket;
+
+            // handle anonymous channel registeration
+            if (srcChannel.length === 0 || srcChannel === '') {
+                do {
+                    srcChannel = uniqid();
+                } while (this._channels.has(srcChannel));
+            }
+
             debug(`srcChannel: ${srcChannel}`);
+
             if (this._channels.has(srcChannel)) {
                 debug(`Channel '${srcChannel}' already exist.`);
                 res.setError(ErrorCode.REGISTER_FAIL);
@@ -136,7 +146,7 @@ class Server {
                 this._channels.register(srcChannel, socket);
                 debug(`Register channel '${srcChannel}'`);
             }
-            res.send('', 'json');
+            res.send({channelName: srcChannel}, 'json');
         };
 
         this._requestHandlers.addResponseListener = (msg, res) => {

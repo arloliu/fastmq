@@ -16,7 +16,7 @@ const debug = util.debuglog('fastmq');
 class Channel {
     constructor(channelName, clientSocket) {
         // public properties
-        this.channel = channelName;
+        this.name = channelName;
 
         // private properties
         this._socket = clientSocket;
@@ -84,7 +84,7 @@ class Channel {
             try {
                 const msg = Message.create('req');
                 msg.setTopic(topic);
-                msg.setSource(this.channel);
+                msg.setSource(this.name);
                 msg.setTarget(target);
                 msg.setContentType(contentType);
                 msg.setPayload(data);
@@ -106,7 +106,7 @@ class Channel {
             try {
                 const msg = Message.create('sreq');
                 msg.setTopic(topic);
-                msg.setSource(this.channel);
+                msg.setSource(this.name);
                 msg.setTarget('');
                 msg.setContentType(contentType);
                 msg.setPayload(data);
@@ -230,6 +230,9 @@ const _registerChannel = (channel) => {
             const err = new Error('register channel fail. errCode:' + msg.header.error);
             throw err;
         } else {
+            if (_.isString(msg.payload.channelName)) {
+                channel.name = msg.payload.channelName;
+            }
             return channel;
         }
     });
@@ -243,7 +246,7 @@ exports.connect = function(...args) {
         throw new Error('Invalid create argument, it needs at least two argument.');
     }
 
-    if (args.length < 1 || typeof args[0] !== 'string') {
+    if (args.length < 1) {
         throw new TypeError('Invalid client channel name, channel name must be a string type.');
     }
 
@@ -251,7 +254,8 @@ exports.connect = function(...args) {
         throw new TypeError('Invalid parameter');
     }
 
-    const channelName = args[0].trim();
+    // set channel name to anonymous or specific one
+    const channelName = _.isNil(args[0]) ? '' : args[0].trim();
     const connectListener = args[args.length - 1];
     const options = {};
 
