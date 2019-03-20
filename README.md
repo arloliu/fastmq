@@ -2,39 +2,39 @@
 > High performance message broker for node.js with multiple network transports support.
 
 **Table of Contents**
-* [Overview](#overview)
-* [Features](#features)
-* [Installation](#installation)
-* [Examples](#examples)
-    * [Simple REQUEST/RESPONSE server and client](#simple-requestresponse-server-and-client)
-    * [Simple REQUEST/RESPONSE pattern between two clients](#simple-requestresponse-pattern-between-two-clients)
-    * [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#simple-pushpull-pattern-one-push-two-pull-workers)
-    * [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#simple-publishsubscribe-pattern-one-publish-two-subscribe-channels)
-* [API](#api)
-    * [FastMQ.Server.create(name)](#fastmqservercreatename)
-    * [FastMQ.Server.create(name, port[, host])](#fastmqservercreatename-port-host)
-    * [Class: FastMQ.Server](#class-fastmqserver)
-        * [server.start()](#serverstart)
-        * [server.stop()](#serverstop)
-        * [server.request(target, topic, data = {}, contentType = 'json')](#serverrequesttarget-topic-data---contenttype--json)
-        * [server.response(topic, listener)](#serverresponsetopic-listener)
-    * [FastMQ.Client.connect(channelName, serverChannel[, connectListener])](#fastmqclientconnectchannelname-serverchannel-connectlistener)
-    * [FastMQ.Client.connect(channelName, serverChannel, port[, host][, connectListener])](#fastmqclientconnectchannelname-serverchannel-port-host-connectlistener)
-    * [Class: FastMQ.Channel](#class-fastmqchannel)
-        * [channel.disconnect()](#channeldisconnect)
-        * [channel.onError(listener)](#channelonerrorlistener)
-        * [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contenttype--json)
-        * [channel.response(topic, listener)](#channelresponsetopic-listener)
-        * [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contenttype--json)
-        * [channel.pull(topic, options, listener)](#channelpulltopic-options-listener)
-        * [channel.publish(target, topic, data, contentType = 'json')](#channelpublishtarget-topic-data-contenttype--json)
-        * [channel.subscribe(topic, listener)](#channelsubscribetopic-listener)
-    * [Class: FastMQ.Message](#class-fastmqmessage)
-        * [message.header](#messageheader)
-        * [message.payload](#messagepayload)
-    * [Class: FastMQ.Response](#class-fastmqresponse)
-        * [response.setError(errCode)](#responseseterrorerrcode)
-        * [response.send(data, contentType)](#responsesenddata-contenttype)
+- [FastMQ](#fastmq)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Examples](#examples)
+    - [Simple REQUEST/RESPONSE server and client](#simple-requestresponse-server-and-client)
+    - [Simple REQUEST/RESPONSE pattern between two clients](#simple-requestresponse-pattern-between-two-clients)
+    - [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#simple-pushpull-pattern-one-push-two-pull-workers)
+    - [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#simple-publishsubscribe-pattern-one-publish-two-subscribe-channels)
+- [API](#api)
+  - [FastMQ.Server.create(name)](#fastmqservercreatename)
+  - [FastMQ.Server.create(name, port[, host])](#fastmqservercreatename-port-host)
+  - [Class: FastMQ.Server](#class-fastmqserver)
+    - [server.start()](#serverstart)
+    - [server.stop()](#serverstop)
+    - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contenttype--json)
+    - [server.response(topic, listener)](#serverresponsetopic-listener)
+  - [FastMQ.Client.connect(channelName, serverPath[, connectListener])](#fastmqclientconnectchannelname-serverpath-connectlistener)
+  - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#fastmqclientconnectchannelname-port-host-connectlistener)
+  - [Class: FastMQ.Channel](#class-fastmqchannel)
+    - [channel.onError(listener)](#channelonerrorlistener)
+    - [channel.disconnect()](#channeldisconnect)
+    - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contenttype--json)
+    - [channel.response(topic, listener)](#channelresponsetopic-listener)
+    - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contenttype--json)
+    - [channel.pull(topic, options, listener)](#channelpulltopic-options-listener)
+    - [channel.publish(target, topic, payload, contentType = 'json')](#channelpublishtarget-topic-payload-contenttype--json)
+      - [channel.subscribe(topic, listener)](#channelsubscribetopic-listener)
+  - [Class: FastMQ.Message](#class-fastmqmessage)
+    - [message.header](#messageheader)
+    - [message.payload](#messagepayload)
+  - [Class: FastMQ.Response](#class-fastmqresponse)
+    - [response.send(payload, contentType)](#responsesendpayload-contenttype)
 
 ## Overview
 FastMQ is a node.js based message broker aims to let programmer easy to commuicate between different processes or machines.
@@ -377,9 +377,9 @@ Return Value: An &lt;FastMQ.Server> object.
 
 
 ---
-## FastMQ.Client.connect(channelName, serverChannel[, connectListener])
+## FastMQ.Client.connect(channelName, serverPath[, connectListener])
 * `channelName`: &lt;String> - the channel name created by this method.
-* `serverChannel`: &lt;String> - server channel name.
+* `serverPath`: &lt;String> - server path.
 * `connectListener`: &lt;Function>, Optional - listener when connect to server.
 
 A factory function, returns a new `FastMQ.Channel` object and connect to the local socket message broker server.
@@ -392,9 +392,8 @@ Return Value: A &lt;Promise> that is resolved with new &lt;FastMQ.Channel> objec
 
 
 
-## FastMQ.Client.connect(channelName, serverChannel, port[, host][, connectListener])
+## FastMQ.Client.connect(channelName, port[, host][, connectListener])
 * `channelName`:&lt;String> - the channel name created by this method.
-* `serverChannel`:&lt;String> - server channel name.
 * `port`:&lt;Number> - server listening port.
 * `host`:&lt;String>, Optional - server host name, defaults to 'localhost'.
 * `connectListener`: &lt;Function>, Optional - The callback when connect to server.

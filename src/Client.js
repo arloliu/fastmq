@@ -2,6 +2,7 @@
 const promiseImpl = require('bluebird');
 global.Promise = promiseImpl;
 
+const _ = require('lodash');
 const net = require('net');
 const EventEmitter = require('eventemitter3');
 const Message = require('./Message.js');
@@ -10,14 +11,12 @@ const MessageReceiver = require('./MessageReceiver.js');
 const util = require('util');
 const common = require('./common.js');
 const getSocketPath = common.getSocketPath;
-const toNumber = common.toNumber;
 const debug = util.debuglog('fastmq');
 
 class Channel {
-    constructor(channelName, serverChannel, clientSocket) {
+    constructor(channelName, clientSocket) {
         // public properties
         this.channel = channelName;
-        this.serverChannel = serverChannel;
 
         // private properties
         this._socket = clientSocket;
@@ -103,7 +102,25 @@ class Channel {
     }
 
     _serverRequest(topic, data = {}, contentType = 'json') {
-        return this.request(this.serverChannel, topic, data, contentType);
+        return new Promise((resolve, reject) => {
+            try {
+                const msg = Message.create('sreq');
+                msg.setTopic(topic);
+                msg.setSource(this.channel);
+                msg.setTarget('');
+                msg.setContentType(contentType);
+                msg.setPayload(data);
+                const msgBuf = msg.getBuffer();
+                this._socket.write(msgBuf);
+
+                // get response data
+                this._responseEvent.once(msg.getEventName(), (resMsg) => {
+                    resolve(resMsg);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 
     response(topic, listener) {
@@ -207,80 +224,74 @@ class Channel {
     }
 }
 
-function _registerChannel(channel, serverChannel) {
+const _registerChannel = (channel) => {
     return channel._serverRequest('register').then((msg) => {
         if (msg.header.error) {
-            const err = new Error('register channel fail.');
-            return Promise.reject(err);
+            const err = new Error('register channel fail. errCode:' + msg.header.error);
+            throw err;
         } else {
-            return Promise.resolve(channel);
+            return channel;
         }
     });
-}
-// connect(channelName, serverChannel[, connectListener])
-// connect(channelName, serverChannel, port[, host][, connectListener])
+};
+
+// connect(channelName, serverPath, [connectListener])
+// connect(channelName, port[, host][, connectListener])
+/* eslint-disable-next-line consistent-return */
 exports.connect = function(...args) {
-    if (arguments.length < 2) {
+    if (args.length < 2) {
         throw new Error('Invalid create argument, it needs at least two argument.');
     }
 
-    // const args = new Array(arguments.length);
-    // for (let i = 0; i < arguments.length; i++) {
-    //     args[i] = arguments[i];
-    // }
-
-    if (args[0] === null || typeof args[0] !== 'string') {
+    if (args.length < 1 || typeof args[0] !== 'string') {
         throw new TypeError('Invalid client channel name, channel name must be a string type.');
     }
-    if (args[1] === null || typeof args[1] !== 'string') {
-        throw new TypeError('Invalid server channel name, channel name must be a string type.');
+
+    if (args.length < 2) {
+        throw new TypeError('Invalid parameter');
     }
 
     const channelName = args[0].trim();
-    const serverChannel = args[1].trim();
     const connectListener = args[args.length - 1];
     const options = {};
 
-    if (arguments.length > 2) {
-        if (typeof args[2] === 'number' && toNumber(args[2]) !== false) {
-            // create(name, port[, host])
-            options.port = toNumber(args[2]);
-            if (arguments.length > 3 && typeof args[3] === 'string') {
-                options.host = args[3];
-            }
+    // process port or serverPath
+    if (_.isString(args[1])) {
+        options.path = getSocketPath(args[1]);
+    } else if (_.isNumber(args[1])) {
+        options.port = args[1];
+    }
 
-            if (options.port !== undefined && options.host === undefined) {
-                options.host = 'localhost';
-            }
-        } else {
-            options.path = getSocketPath(serverChannel);
+    if (args.length > 2) {
+        if (_.isString(args[2])) {
+                options.host = args[2];
         }
-    } else {
-        options.path = getSocketPath(serverChannel);
     }
 
     // use node.js callback pattern
-    if (typeof connectListener === 'function') {
+    if (_.isFunction(connectListener)) {
         const socket = net.connect(options);
-        const channel = new Channel(channelName, serverChannel, socket);
+        const channel = new Channel(channelName, socket);
         socket.on('connect', () => {
-            _registerChannel(channel)
+            return _registerChannel(channel)
                 .then(() => {
                     connectListener(null, channel);
                 })
                 .catch((err) => {
+                    console.log('Got error!!');
                     connectListener(err, channel);
                 });
         });
-        return channel;
     } else {
         // use Promise pattern
         return new Promise((resolve, reject) => {
             const socket = net.connect(options, () => {
-                const channel = new Channel(channelName, serverChannel, socket);
+                const channel = new Channel(channelName, socket);
                 return _registerChannel(channel)
                     .then(resolve)
-                    .catch(reject);
+                    .catch((err) => {
+                        reject(err);
+                    });
             });
         });
     }

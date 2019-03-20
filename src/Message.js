@@ -11,6 +11,7 @@ const MSG_TYPE = {
     pub: 5,
     sub: 6,
     ack: 7,
+    sreq: 0xff,
 };
 const MSG_CONTENT_TYPE = { raw: 1, json: 2, str: 3 };
 
@@ -25,9 +26,11 @@ MessageType {
     req: 1,
     res: 2,
     push: 3,
-    pub: 4,
-    sub: 5,
-    ack: 6
+    pull: 4,
+    pub: 5,
+    sub: 6,
+    ack: 7,
+    sreq: 0xff,
 }
 
 ContentType {
@@ -174,6 +177,9 @@ class Message {
     isRequest() {
         return this.header.type === 'req';
     }
+    isServerRequest() {
+        return this.header.type === 'sreq';
+    }
     isResponse() {
         return this.header.type === 'res';
     }
@@ -273,8 +279,8 @@ class Message {
 }
 
 class RequestMessage extends Message {
-    constructor(id, msgLen, headerLen) {
-        super('req', id, msgLen, headerLen);
+    constructor(id, msgLen, headerLen, type) {
+        super(type ? type : 'req', id, msgLen, headerLen);
     }
 
     createFromBuffer(buf) {
@@ -329,10 +335,17 @@ class RequestMessage extends Message {
     }
 }
 
+class ServerRequestMessage extends RequestMessage {
+    constructor(id, msgLen, headerLen) {
+        super(id, msgLen, headerLen, 'sreq');
+    }
+}
+
+
 class ResponseMessage extends RequestMessage {
     constructor(id, msgLen, headerLen) {
-        super(id, msgLen, headerLen);
-        this.header.type = 'res';
+        super(id, msgLen, headerLen, 'res');
+        // this.header.type = 'res';
     }
 
     isError(name) {
@@ -710,6 +723,8 @@ exports.create = function(type, id) {
         return new SubscribeMessage(id);
     } else if (type === 'ack') {
         return new AckMessage(id);
+    } else if (type === 'sreq') {
+        return new ServerRequestMessage(id);
     } else {
         throw new TypeError(`Message type:${type} is not valid.`);
     }
@@ -738,6 +753,8 @@ exports.createFromBuffer = function(buf) {
         msg = new SubscribeMessage(id, msgLen, headerLen);
     } else if (type === 'ack') {
         msg = new AckMessage(id, msgLen, headerLen);
+    } else if (type === 'sreq') {
+        msg = new ServerRequestMessage(id, msgLen, headerLen);
     } else {
         throw new TypeError(`Message type:${type} is not valid.`);
     }

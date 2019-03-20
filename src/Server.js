@@ -2,6 +2,7 @@
 const promiseImpl = require('bluebird');
 global.Promise = promiseImpl;
 
+const _ = require('lodash');
 const net = require('net');
 const fs = require('fs');
 const EventEmitter = require('eventemitter3');
@@ -13,7 +14,6 @@ const ChannelManager = require('./ChannelManager.js');
 const ErrorCode = require('./ErrorCode.js');
 const common = require('./common.js');
 const getSocketPath = common.getSocketPath;
-const toNumber = common.toNumber;
 const util = require('util');
 const debug = util.debuglog('fastmq');
 
@@ -82,6 +82,14 @@ class Server {
                     }
                 }
             }
+        } else if (msg.isServerRequest()) {
+            debug('process server request');
+            // process server request
+            const res = new Response(msg, socket);
+            if (!this._processInternalRequest(msg, socket)) {
+                res.setError(ErrorCode.TOPIC_NONEXIST);
+                res.send('', 'json');
+            }
         } else if (msg.isResponse()) {
             // Response message
             if (header.target !== this.channel) {
@@ -120,6 +128,7 @@ class Server {
         this._requestHandlers.register = (msg, res) => {
             const srcChannel = msg.header.source;
             const socket = res.socket;
+            debug(`srcChannel: ${srcChannel}`);
             if (this._channels.has(srcChannel)) {
                 debug(`Channel '${srcChannel}' already exist.`);
                 res.setError(ErrorCode.REGISTER_FAIL);
@@ -322,25 +331,25 @@ class Server {
 }
 
 // create(name)
-// create(name, port[, host])
+// create(port[, host])
 exports.create = function(...args) {
-    if (arguments.length < 1) {
+    if (args.length < 1) {
         throw new Error('Invalid create argument, it needs at least one argument.');
     }
 
     const options = {};
     // get channel name
-    if (args[0] === null || typeof args[0] !== 'string') {
+    if (!_.isString(args[0])) {
         throw new TypeError('Invalid channel name, channel name must be a string type.');
     } else {
         options.name = args[0];
     }
 
-    if (arguments.length > 1) {
-        if (typeof args[1] === 'number' && toNumber(args[1]) !== false) {
+    if (args.length > 1) {
+        if (_.isNumber(args[1])) {
             // create(name, port[, host])
-            options.port = toNumber(args[1]);
-            if (arguments.length > 2 && typeof args[2] === 'string') {
+            options.port = _.toNumber(args[1]);
+            if (args.length > 2 && _.isString(args[2])) {
                 options.host = args[2];
             }
         }
@@ -350,5 +359,6 @@ exports.create = function(...args) {
         options.host = 'localhost';
     }
 
+    console.log('server options:', options);
     return new Server(options);
 };
