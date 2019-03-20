@@ -359,6 +359,5 @@ exports.create = function(...args) {
         options.host = 'localhost';
     }
 
-    console.log('server options:', options);
     return new Server(options);
 };

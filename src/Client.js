@@ -278,7 +278,6 @@ exports.connect = function(...args) {
                     connectListener(null, channel);
                 })
                 .catch((err) => {
-                    console.log('Got error!!');
                     connectListener(err, channel);
                 });
         });
