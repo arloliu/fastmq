@@ -312,7 +312,7 @@ FastMQ contains serveral major classes:
 
 A factory function, create local socket message broker server. It create a UNIX domain socket or Windows named PIPE to accept local communication between proccesses.
 
-Return Value: `FastMQ.Server` object
+**Return Value**: `FastMQ.Server` object
 
 
 ## FastMQ.Server.create(name, port[, host])
@@ -322,7 +322,7 @@ Return Value: `FastMQ.Server` object
 
 A factory function, reate TCP socket message broker server. It's useful to communication between different machines.
 
-Return Value: `FastMQ.Server` object
+**Return Value**: `FastMQ.Server` object
 
 
 
@@ -333,13 +333,13 @@ A local or TCP message broker server.
 ### server.start()
 Start server. It is an async. operation which return a &lt;Promise> and resolve when server has been started.
 
-Return Value: A &lt;Promise> that is resolved with &lt;FastMQ.Server> object.
+**Return Value**: A &lt;Promise> that is resolved with &lt;FastMQ.Server> object.
 
 
 ### server.stop()
 Stop server. It is an async. operation which return a &lt;Promise> and resolve when server has been  stopped.
 
-Return Value: A &lt;Promise> that is resolved with &lt;FastMQ.Server> object.
+**Return Value**: A &lt;Promise> that is resolved with &lt;FastMQ.Server> object.
 
 
 ### server.request(target, topic, payload = {}, contentType = 'json')
@@ -356,7 +356,7 @@ For example, there are two channels 'worker.1' and 'worker.2' listen a topic 'do
 
 If you want to send message from one channel to multiple channels, you might perfer to use PUSH/PULL or PUBLISH/SUBSCRIBE pattern.
 
-Return Value: A &lt;Promise> that is resolved with &lt;FastMQ.Message> object.
+**Return Value**: A &lt;Promise> that is resolved with &lt;FastMQ.Message> object.
 
 
 ### server.response(topic, listener)
@@ -373,12 +373,12 @@ This method returns current server object, which can be used as Method Chaining 
 server.response('topic1', listener1).response('topic2', listener2);
 ```
 
-Return Value: An &lt;FastMQ.Server> object.
+**Return Value**: An &lt;FastMQ.Server> object.
 
 
 ---
 ## FastMQ.Client.connect(channelName, serverPath[, connectListener])
-* `channelName`: &lt;String> - the channel name created by this method.
+* `channelName`: &lt;String | null> - the channel name created by this method. Set it to `null` or empty string for anonymous channel
 * `serverPath`: &lt;String> - server path.
 * `connectListener`: &lt;Function>, Optional - listener when connect to server.
 
@@ -388,21 +388,25 @@ The `listener` is passed with two parameters `(err, channel)`, where `err` is a 
 
 It supports two different styles, node.js callback style when specify `connectListener` or Promise style which returns a Promise object that is resolved with new &lt;FastMQ.Channel> object when connect success or rejected if not.
 
-Return Value: A &lt;Promise> that is resolved with new &lt;FastMQ.Channel> object when connected success or rejected if not.
+> It also supports anonymous channel feature since `v1.1.2`, which solves channel name conflicting problem. A uniqle channel name will be created by server, fill it into `channel` object and returns to client.
+
+**Return Value**: A &lt;Promise> that is resolved with new &lt;FastMQ.Channel> object when connected success or rejected if not.
 
 
 
 ## FastMQ.Client.connect(channelName, port[, host][, connectListener])
-* `channelName`:&lt;String> - the channel name created by this method.
+* `channelName`:&lt;String> - the channel name created by this method. Set it to `null` or empty string for anonymous channel
 * `port`:&lt;Number> - server listening port.
 * `host`:&lt;String>, Optional - server host name, defaults to 'localhost'.
 * `connectListener`: &lt;Function>, Optional - The callback when connect to server.
 
 A factory function, returns a new `FastMQ.Channel` object and connect to the TCP socket message broker server.
 
-It supports two different styles same as `FastMQ.Client.connect(channelName, serverChannel[, connectListener])`.
+It supports two different styles same as `FastMQ.Client.connect(channelName, serverPath, [, connectListener])`.
 
-Return Value: A &lt;Promise> that is resolved with new &lt;FastMQ.Channel> object when connected success or rejected if not.
+> It also supports anonymous channel feature since `v1.1.2`, which solves channel name conflicting problem. A uniqle channel name will be created by server, fill it into `channel` object and returns to client.
+
+**Return Value**: A &lt;Promise> that is resolved with new &lt;FastMQ.Channel> object when connected success or rejected if not.
 
 
 ## Class: FastMQ.Channel
@@ -434,7 +438,7 @@ For example, there are two channels 'worker.1' and 'worker.2' listen a topic 'do
 
 If you want to send message from one channel to multiple channels, you might perfer to use PUSH/PULL or PUBLISH/SUBSCRIBE pattern.
 
-Return Value: A &lt;Promise> that is resolved with &lt;FastMQ.Message> object.
+**Return Value**: A &lt;Promise> that is resolved with &lt;FastMQ.Message> object.
 
 
 
@@ -452,7 +456,7 @@ This method returns current channel object, which can be used as Method Chaining
 channel.response('topic1', listener1).response('topic2', listener2);
 ```
 
-Return Value: An &lt;FastMQ.Channel> object.
+**Return Value**: An &lt;FastMQ.Channel> object.
 
 
 
@@ -472,7 +476,7 @@ const items = [{data: 'item1'}, {data: 'item2'}, {data: 'item3'}]
 
 PUSH/PULL is a many-to-one pattern, multiple PUSH endpoints push to one queue, and multiple PULL endpoints pull payload from this queue.
 
-Return Value: A &lt;Promise> that is resolved when this channel pushed message to message broker.
+**Return Value**: A &lt;Promise> that is resolved when this channel pushed message to message broker.
 
 
 
@@ -499,7 +503,7 @@ The `prefetch` is a &lt;Number> to tell message broker that how many PUSH items 
 
 This method returns current channel object, which can be used as Method Chaining syntax.
 
-Return Value: An &lt;FastMQ.Channel> object.
+**Return Value**: An &lt;FastMQ.Channel> object.
 
 
 ### channel.publish(target, topic, payload, contentType = 'json')
@@ -512,7 +516,7 @@ Send PUSH message to the `target` channel which listen `topic`. All SUBSCRIBE ch
 
 Unlike PUSH/PULL, PUBLISH/SUBSCRIBE is a one-to-many pattern, and it doesn't have acknowledge mechanism because it's not make sence to re-deliver a publish message to a subscribe channel when this channel didn't listen at the time of publish message delivered.
 
-Return Value: A &lt;Promise> that is resolved when this channel published message to message broker.
+**Return Value**: A &lt;Promise> that is resolved when this channel published message to message broker.
 
 
 
@@ -524,11 +528,11 @@ Receive PUBLISH message which matches the `topic` with `listener` callback.
 
 The `listener` is passed with one parameters `(msg)`, where `msg` is a &lt;FastMQ.Message> contains a PUBLISH message.
 
-Return Value: A &lt;Promise> that is resolved when this channel published message to message broker.
+**Return Value**: A &lt;Promise> that is resolved when this channel published message to message broker.
 
 This method returns current channel object, which can be used as Method Chaining syntax.
 
-Return Value: An &lt;FastMQ.Channel> object.
+**Return Value**: An &lt;FastMQ.Channel> object.
 
 ---
 ## Class: FastMQ.Message
