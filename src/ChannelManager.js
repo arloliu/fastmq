@@ -12,6 +12,7 @@ function getRandomInt(min, max) {
 class ChannelManager {
     constructor() {
         this._channels = {};
+        this._channelCache = new Map();
     }
 
     has(name) {
@@ -28,6 +29,18 @@ class ChannelManager {
         return false;
     }
 
+    _updateChannelCache(name) {
+        debug(`ChannelManager._updateChannelCache, name: ${name}`);
+        this._channelCache.forEach((value, key, map) => {
+            const regex = new RegExp(key);
+            debug(`ChannelManager._updateChannelCache, regex: ${regex.toString()}, name: ${name}`);
+            if (regex.test(name)) {
+                debug(`ChannelManager._updateChannelCache, find matched, remove channel cache: ${regex.toString()}`);
+                map.delete(regex);
+            }
+        });
+    }
+
     register(name, socket) {
         if (this.has(name)) {
             delete this._channels[name];
@@ -37,11 +50,13 @@ class ChannelManager {
             socket: socket,
             handlers: {},
         };
+        this._updateChannelCache(name);
     }
 
     unregister(name) {
         debug('unregister channel name: ' + name);
         delete this._channels[name];
+        this._updateChannelCache(name);
     }
 
     unregisterBySocket(socket) {
@@ -79,13 +94,21 @@ class ChannelManager {
     }
 
     find(nameGlob) {
-        const channels = [];
         const re = globToRegExp(nameGlob);
+        const cacheKey = re.source;
+        const cache = this._channelCache.get(cacheKey);
+        if (cache) {
+            return cache;
+        }
+
+        const channels = [];
         for (const key in this._channels) {
             if (re.test(key)) {
                 channels.push(channel);
             }
         }
+        debug('set channel cache, key: ', cacheKey);
+        this._channelCache.set(cacheKey, channels);
         return channels;
     }
 
@@ -125,13 +148,32 @@ class ChannelManager {
     _findTopic(type, nameGlob, topic) {
         const channels = [];
         const re = globToRegExp(nameGlob);
-        for (const key in this._channels) {
-            if (re.test(key) || key === nameGlob) {
+        const cacheKey = re.source;
+        const cache = this._channelCache.get(cacheKey);
+        if (cache) {
+            for (const key in cache) {
+                if (!Object.hasOwnProperty.call(cache, key)) {
+                    continue;
+                }
                 const channel = this._channels[key];
                 const handlers = channel.handlers;
                 if (handlers.hasOwnProperty(topic) && handlers[topic].type === type) {
                     // debug(`got channel ${key} by type: ${type}, topic: ${topic}`);
                     channels.push(channel);
+                }
+            }
+        } else {
+            for (const key in this._channels) {
+                if (!Object.hasOwnProperty.call(this._channels, key)) {
+                    continue;
+                }
+                if (re.test(key) || key === nameGlob) {
+                    const channel = this._channels[key];
+                    const handlers = channel.handlers;
+                    if (handlers.hasOwnProperty(topic) && handlers[topic].type === type) {
+                        // debug(`got channel ${key} by type: ${type}, topic: ${topic}`);
+                        channels.push(channel);
+                    }
                 }
             }
         }

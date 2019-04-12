@@ -29,6 +29,20 @@ class TaskQueue {
         this._queue = new Queue(16);
         this._nonAckTasks = {};
         this._channelIndex = 0;
+
+        this._subChannelCache = new Map();
+    }
+
+    _updateSubChannelCache(name) {
+        debug(`TaskQueue._updateSubChannelCache, name: ${name}`);
+        this._subChannelCache.forEach((value, key, map) => {
+            const regex = new RegExp(key);
+            debug(`TaskQueue._updateSubChannelCache, key: ${regex}, name: ${name}`);
+            if (regex.test(name)) {
+                debug(`TaskQueue._updateSubChannelCache, Find matched, remove channel cache: ${regex}`);
+                map.delete(key);
+            }
+        });
     }
 
     addChannel(channel) {
@@ -58,20 +72,31 @@ class TaskQueue {
         if (!this._queue.isEmpty()) {
             this.process();
         }
+        debug(`TaskQueue.addChannel name: ${channelName}  type: ${handler.type}`);
+        if (handler.type === 'subscribe') {
+            this._updateSubChannelCache(channelName);
+        }
+
         return true;
     }
 
     removeChannel(name) {
         const len = this._channels.length;
+        let isSubChannel = false;
         for (let i = len - 1; i >= 0; i--) {
             const channel = this._channels[i];
             if (channel.name === name) {
                 this._channels.splice(i, 1);
+                isSubChannel = true;
             }
         }
 
         if (this._channelIndex >= this._channels.length) {
             this._channelIndex = 0;
+        }
+
+        if (isSubChannel) {
+            this._updateSubChannelCache(name);
         }
     }
 
@@ -220,7 +245,6 @@ class TaskQueue {
             const msg = createMessage('sub', item, this._topic);
             for (let i = 0; i < subChannelLength; i++) {
                 const channel = subChannels[i];
-                debug('socket write');
                 channel.socket.write(msg.getBuffer());
             }
         }
@@ -258,6 +282,12 @@ class TaskQueue {
     }
 
     _getSubscribeChannels(regexp) {
+        const cacheKey = regexp.source;
+        const cache = this._subChannelCache.get(cacheKey);
+        if (cache) {
+            return cache;
+        }
+
         const len = this._channels.length;
         const channels = [];
         for (let i = 0; i < len; i++) {
@@ -266,6 +296,7 @@ class TaskQueue {
                 channels.push(channel);
             }
         }
+        this._subChannelCache.set(cacheKey, channels);
         return channels;
     }
 }
