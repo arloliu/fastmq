@@ -135,6 +135,12 @@ class Server {
                 do {
                     srcChannel = uniqid();
                 } while (this._channels.has(srcChannel));
+            } else if (srcChannel.indexOf('#') !== -1) {
+                // handle wildcard uniqle id channel registeration
+                do {
+                    const id = uniqid();
+                    srcChannel = srcChannel.replace(/#/g, id);
+                } while (this._channels.has(srcChannel));
             }
 
             debug(`srcChannel: ${srcChannel}`);
