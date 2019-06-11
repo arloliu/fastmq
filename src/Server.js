@@ -371,7 +371,7 @@ exports.create = function(...args) {
         }
     }
 
-    if (typeof options.port === 'number' && options.host === undefined) {
+    if (_.isInteger(options.port) && _.isNil(options.host)) {
         options.host = 'localhost';
     }
 

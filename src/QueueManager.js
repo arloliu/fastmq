@@ -350,21 +350,21 @@ class QueueManager {
         return false;
     }
 
-    async processPublishTask(target, topic, payload, contentType) {
+    processPublishTask(target, topic, payload, contentType) {
         const queue = this.get('sub', topic);
         const targetRegExp = globToRegExp(target);
-        await queue.enqueue(payload, targetRegExp, contentType);
-        await queue.process();
+        queue.enqueue(payload, targetRegExp, contentType);
+        queue.process();
     }
 
-    async processPushTasks(target, topic, items, contentType) {
+    processPushTasks(target, topic, items, contentType) {
         const queue = this.get('pull', topic);
         const itemCount = items.length;
         const targetRegExp = globToRegExp(target);
         for (let i = 0; i < itemCount; i++) {
-            await queue.enqueue(items[i], targetRegExp, contentType);
+            queue.enqueue(items[i], targetRegExp, contentType);
         }
-        await queue.process();
+        queue.process();
     }
 }
 
