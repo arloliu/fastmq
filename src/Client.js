@@ -14,30 +14,31 @@ const getSocketPath = common.getSocketPath;
 const debug = util.debuglog('fastmq');
 
 class Channel {
-    constructor(channelName, clientSocket) {
+    constructor(channelName, options) {
         // public properties
         this.name = channelName;
 
         // private properties
-        this._socket = clientSocket;
+        this._options = _.cloneDeep(options);
+        this._socket = null;
+        this._connected = false;
+
         this._requestEvent = new EventEmitter();
         this._responseEvent = new EventEmitter();
         this._subEvent = new EventEmitter();
         this._pullEvent = new EventEmitter();
-        this._errorEvent = new EventEmitter();
+        this._internalEvent = new EventEmitter();
+
+        this._eventStore = {
+            'sub': [],
+            'pull': [],
+        };
 
         this._messageHandler = this._messageHandler.bind(this);
         this._msgReceiver = new MessageReceiver(this._messageHandler);
         this._msgReceiver.on('error', (err) => {
             debug('Message receiver got error:', err.stack);
-            this._errorEvent.emit('error', err);
-        });
-
-        this._socket.on('data', (chunk) => {
-            this._msgReceiver.recv(chunk, this._socket);
-        });
-        this._socket.on('error', (err) => {
-            this._errorEvent.emit('error', err);
+            this._internalEvent.emit('error', err);
         });
     }
 
@@ -65,11 +66,104 @@ class Channel {
     }
 
     onError(listener) {
-        if (listener === undefined || typeof listener !== 'function') {
+        if (!_.isFunction(listener)) {
             throw new TypeError('Listener must be a function.');
         }
 
-        this._errorEvent.on('error', listener);
+        this._internalEvent.on('error', listener);
+    }
+
+    onReconnect(listener) {
+        if (!_.isFunction(listener)) {
+            throw new TypeError('Listener must be a function.');
+        }
+
+        this._internalEvent.on('reconnect', listener);
+    }
+
+    connect(isReconnect) {
+        const socketOptions = {
+            path: this._options.path,
+            port: this._options.port,
+            host: this._options.host,
+        };
+
+        const cbStyle = _.isFunction(this._options.connectListener);
+
+        return new Promise((resolve, reject) => {
+            this._socket = net.connect(socketOptions);
+
+            this._socket.on('data', (chunk) => {
+                this._msgReceiver.recv(chunk, this._socket);
+            });
+
+            this._socket.on('error', (err) => {
+                this._internalEvent.emit('error', err);
+            });
+
+            this._socket.on('connect', () => {
+                this._registerChannel().then(() => {
+                    this._connected = true;
+                    debug('client connected, _connected:', this._connected);
+
+                    if (isReconnect) {
+                        do {
+                            const sub = this._eventStore.sub.pop();
+                            if (!sub) {
+                                break;
+                            }
+                            this.subscribe(sub.topic, sub.listener);
+                        } while (true);
+
+                        do {
+                            const pull = this._eventStore.pull.pop();
+                            if (!pull) {
+                                break;
+                            }
+                            this.pull(pull.topic, pull.options, pull.listener);
+                        } while (true);
+                    }
+
+                    if (cbStyle) {
+                        this._options.connectListener(null, this);
+                    } else {
+                        resolve(this);
+                    }
+                })
+                .catch((err) => {
+                    if (cbStyle) {
+                        this._options.connectListener(err, this);
+                    } else {
+                        reject(err);
+                    }
+                });
+            });
+
+            this._socket.on('close', (err) => {
+                this._responseEvent.removeAllListeners();
+                this._subEvent.removeAllListeners();
+                this._pullEvent.removeAllListeners();
+                this._connected = false;
+
+                this._socket.destroy();
+                this._socket.unref();
+                this._socket = null;
+                debug('client close');
+                this.reconnect();
+            });
+        });
+    }
+
+    reconnect() {
+        if (this._connected) {
+            return;
+        }
+        setTimeout(() => {
+            debug('reconnect');
+            this.connect(true).then(() => {
+                this._internalEvent.emit('reconnect');
+            });
+        }, this._options.reconnectInterval);
     }
 
     disconnect() {
@@ -123,6 +217,20 @@ class Channel {
         });
     }
 
+    _registerChannel() {
+        return this._serverRequest('register').then((msg) => {
+            if (msg.header.error) {
+                const err = new Error('register channel fail. errCode:' + msg.header.error);
+                throw err;
+            } else {
+                if (_.isString(msg.payload.channelName)) {
+                    this.name = msg.payload.channelName;
+                }
+                return this;
+            }
+        });
+    }
+
     response(topic, listener) {
         this._requestEvent.on(topic, (reqMsg, res) => {
             listener(reqMsg, res);
@@ -132,7 +240,7 @@ class Channel {
             debug(`addResponseListener topic: ${topic}, result: ${resMsg.payload.result}`);
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._requestEvent.removeAllListeners(topic);
-                this._errorEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
+                this._internalEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
             }
         });
         return this;
@@ -171,16 +279,27 @@ class Channel {
             });
         });
 
-        this._serverRequest('addPullListener', regPayload, 'json').then((resMsg) => {
+        return this._serverRequest('addPullListener', regPayload, 'json').then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._pullEvent.removeAllListeners(topic);
-                this._errorEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
+                this._internalEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
+            } else {
+                this._eventStore.pull.push({
+                    topic: topic,
+                    options: options,
+                    listener: listener,
+                });
             }
+            return this;
         });
-        return this;
     }
 
     publish(target, topic, data, contentType = 'json') {
+        if (!this._connected) {
+            this._internalEvent.emit('error', new Error(`Publish ${topic} fail, under disconnect state, ${this._connected}`));
+            return Promise.resolve();
+        }
+
         if (arguments.length < 3) {
             return Promise.reject(new Error('Need at least three arguments.'));
         }
@@ -210,10 +329,15 @@ class Channel {
         return this._serverRequest('addSubscribeListener', regPayload, 'json').then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._subEvent.removeAllListeners(topic);
-                this._errorEvent.emit('error', new Error(`Register subscribe listener for topic: ${topic} fail`));
+                this._internalEvent.emit('error', new Error(`Register subscribe listener for topic: ${topic} fail`));
+            } else {
+                this._eventStore.sub.push({
+                    topic: topic,
+                    listener: listener,
+                });
             }
+            return this;
         });
-        return this;
     }
 
     _sendAck(id, topic) {
@@ -224,78 +348,50 @@ class Channel {
     }
 }
 
-const _registerChannel = (channel) => {
-    return channel._serverRequest('register').then((msg) => {
-        if (msg.header.error) {
-            const err = new Error('register channel fail. errCode:' + msg.header.error);
-            throw err;
-        } else {
-            if (_.isString(msg.payload.channelName)) {
-                channel.name = msg.payload.channelName;
-            }
-            return channel;
-        }
-    });
-};
-
 // connect(channelName, serverPath, [connectListener])
 // connect(channelName, port[, host][, connectListener])
-/* eslint-disable-next-line consistent-return */
+// connect(channelName, options[, connectListener])
+// options = {
+//     host: '127.0.0.1',
+//     port: 5555,
+//     reconnect: true,
+//     reconnectInterval: 1000
+// }
+
 exports.connect = function(...args) {
     if (args.length < 2) {
         throw new Error('Invalid create argument, it needs at least two argument.');
     }
 
-    if (args.length < 1) {
+    if (!_.isString(args[0])) {
         throw new TypeError('Invalid client channel name, channel name must be a string type.');
-    }
-
-    if (args.length < 2) {
-        throw new TypeError('Invalid parameter');
     }
 
     // set channel name to anonymous or specific one
     const channelName = _.isNil(args[0]) ? '' : args[0].trim();
     const connectListener = args[args.length - 1];
-    const options = {};
-
-    // process port or serverPath
-    if (_.isString(args[1])) {
+    let options = {};
+    const defaultOptions = {
+        reconnect: true,
+        reconnectInterval: 1000,
+    };
+    // process options, port or serverPath
+    if (_.isPlainObject(args[1])) {
+        const opts = args[1];
+        options = _.merge(defaultOptions, opts);
+    } else if (_.isString(args[1])) {
         options.path = getSocketPath(args[1]);
     } else if (_.isNumber(args[1])) {
         options.port = args[1];
     }
 
-    if (args.length > 2) {
-        if (_.isString(args[2])) {
-                options.host = args[2];
-        }
+    if (args.length > 2 && _.isString(args[2])) {
+        options.host = args[2];
     }
+    debug('options:', options);
 
-    // use node.js callback pattern
-    if (_.isFunction(connectListener)) {
-        const socket = net.connect(options);
-        const channel = new Channel(channelName, socket);
-        socket.on('connect', () => {
-            return _registerChannel(channel)
-                .then(() => {
-                    connectListener(null, channel);
-                })
-                .catch((err) => {
-                    connectListener(err, channel);
-                });
-        });
-    } else {
-        // use Promise pattern
-        return new Promise((resolve, reject) => {
-            const socket = net.connect(options, () => {
-                const channel = new Channel(channelName, socket);
-                return _registerChannel(channel)
-                    .then(resolve)
-                    .catch((err) => {
-                        reject(err);
-                    });
-            });
-        });
-    }
+    options.connectListener = connectListener;
+
+    const channel = new Channel(channelName, options);
+    return channel.connect();
 };
