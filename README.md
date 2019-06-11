@@ -417,14 +417,16 @@ It supports both callback and Promise styles.
 
 > New Method Since `v1.2.0`
 
-A factory function, returns a new `FastMQ.Channel` object and connect to the TCP/local socket message broker server. Like above two `connect` methods but use `options` argument to setup connection options.
+A factory function, returns a new `FastMQ.Channel` object and connect to the TCP/local socket message broker server.
+
+Like above two `connect` methods but use `options` argument to setup connection options.
 
 The `options` contains parameters:
-    * `host`:&lt;String> - server host name, defaults to 'localhost'. *This parameter are only be used in TCP mode*.
-    * `port`:&lt;Number> - server listening port. *This parameter are only be used in TCP mode*.
-    * `path`:&lt;String> - local socket path. *This parameter are only be used in local socket mode*.
-    * `reconnect`:&lt;Boolean> - enable reconnect feature or not, deafults to `true`.
-    * `reconnectInterval`:&lt;Number> - reconnect interval, unit is `ms`, defaults to `1000`.
+* `host`:&lt;String> - server host name, defaults to 'localhost'. *This parameter are only be used in TCP mode*.
+* `port`:&lt;Number> - server listening port. *This parameter are only be used in TCP mode*.
+* `path`:&lt;String> - local socket path. *This parameter are only be used in local socket mode*.
+* `reconnect`:&lt;Boolean> - enable reconnect feature or not, deafults to `true`.
+* `reconnectInterval`:&lt;Number> - reconnect interval, unit is `ms`, defaults to `1000`.
 
 It supports both callback and Promise styles.
 
