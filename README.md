@@ -25,7 +25,7 @@
   - [Class: FastMQ.Channel](#class-fastmqchannel)
     - [channel.onError(listener)](#channelonerrorlistener)
     - [channel.onReconnect(listener)](#channelonreconnectlistener)
-    - [channel.disconnect()](#channeldisconnect)
+    - [channel.disconnect(graceful)](#channeldisconnectgraceful)
     - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contenttype--json)
     - [channel.response(topic, listener)](#channelresponsetopic-listener)
     - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contenttype--json)
@@ -453,8 +453,12 @@ Add `listener` to handle reconnection, it will be triggeed after client reconnec
 
 The `listener` callback function is passed with no parameter.
 
-### channel.disconnect()
-Disconnect channel.
+### channel.disconnect(graceful)
+* `graceful`: &lt;Boolean> - graceful disconnect client, defaults to `false` *New parameter since v1.2.0*
+
+Disconnect channel, in graceful mode, this mehod acts as asynchronous function, which return &lt;Promise> instance and resolved after received `FIN` packet from server.
+
+**Return Value**: A &lt;Promise> if graceful mode
 
 ### channel.request(target, topic, data = {}, contentType = 'json')
 * `target`: &lt;String> -  target channel name to send request, support GLOB expression, ex: 'log.*.debug'.

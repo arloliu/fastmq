@@ -22,7 +22,7 @@ class Channel {
         this._options = _.cloneDeep(options);
         this._socket = null;
         this._connected = false;
-
+        this._needReconnect = false;
         this._requestEvent = new EventEmitter();
         this._responseEvent = new EventEmitter();
         this._subEvent = new EventEmitter();
@@ -98,12 +98,14 @@ class Channel {
             });
 
             this._socket.on('error', (err) => {
+                this._needReconnect = true;
                 this._internalEvent.emit('error', err);
             });
 
             this._socket.on('connect', () => {
                 this._registerChannel().then(() => {
                     this._connected = true;
+                    this._needReconnect = true;
                     debug('client connected, _connected:', this._connected);
 
                     if (isReconnect) {
@@ -155,7 +157,7 @@ class Channel {
     }
 
     reconnect() {
-        if (this._connected) {
+        if (this._connected || !this._needReconnect) {
             return;
         }
         setTimeout(() => {
@@ -166,10 +168,37 @@ class Channel {
         }, this._options.reconnectInterval);
     }
 
-    disconnect() {
-        if (this._socket) {
-            this._socket.destroy();
-            this._socket.unref();
+    /* eslint-disable-next-line consistent-return */
+    disconnect(graceful) {
+        this._needReconnect = false;
+        if (graceful) {
+            return new Promise((resolve, reject) => {
+                let isClose = false;
+                if (!this._socket) {
+                    resolve();
+                    return;
+                }
+                this._socket.once('end', () => {
+                    isClose = true;
+                    console.log(`Channel ${this.name} disconnected`);
+                    resolve();
+                    return;
+                });
+                setTimeout(() => {
+                    if (!isClose) {
+                        this._socket.destroy();
+                        this._socket.unref();
+                        console.log(`Channel ${this.name} disconnected forcelly`);
+                        resolve();
+                    }
+                }, 1000);
+                this._socket.end();
+            });
+        } else {
+            if (this._socket) {
+                this._socket.destroy();
+                this._socket.unref();
+            }
         }
     }
 
