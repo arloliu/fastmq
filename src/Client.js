@@ -180,7 +180,7 @@ class Channel {
                 }
                 this._socket.once('end', () => {
                     isClose = true;
-                    console.log(`Channel ${this.name} disconnected`);
+                    debug(`Channel ${this.name} disconnected`);
                     resolve();
                     return;
                 });
@@ -188,7 +188,7 @@ class Channel {
                     if (!isClose) {
                         this._socket.destroy();
                         this._socket.unref();
-                        console.log(`Channel ${this.name} disconnected forcelly`);
+                        debug(`Channel ${this.name} disconnected forcelly`);
                         resolve();
                     }
                 }, 1000);
