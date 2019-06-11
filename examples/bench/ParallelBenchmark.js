@@ -26,7 +26,7 @@ class ParallelBenchmark extends EventEmitter {
         } else {
             this.emit('start', this);
         }
-
+        let stat;
         return this.setup
             .call(this._fnContext)
             .then(() => {
@@ -35,18 +35,19 @@ class ParallelBenchmark extends EventEmitter {
             })
             .then(() => {
                 const ops = parseInt((this._completedCount * 1000) / this.elapsedTime, 10);
-                const stat = {
+                stat = {
                     name: this.name,
                     ops: ops,
                     elapsed: this.elapsedTime,
                     completed: this._completedCount,
                 };
                 if (this.onComplete) {
-                    this.onComplete.call(this._fnContext, stat);
+                    return Promise.resolve(this.onComplete.call(this._fnContext, stat));
                 } else {
-                    this.emit('complete', stat);
+                    return Promise.resolve(this.emit('complete', stat));
                 }
-
+            })
+            .then(() => {
                 return stat;
             });
     }
