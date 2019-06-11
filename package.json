@@ -10,7 +10,7 @@
     "queue"
   ],
   "engines": {
-    "node": ">=4.8.3"
+    "node": ">=10.0.0"
   },
   "main": "lib/index.js",
   "author": "Arlo Liu <arlo.liu@gmail.com>",
