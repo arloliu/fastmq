@@ -35,8 +35,11 @@
   - [Class: FastMQ.Message](#class-fastmqmessage)
     - [message.header](#messageheader)
     - [message.payload](#messagepayload)
+    - [message.setError(code)](#messageseterrorcode)
+    - [message.isError(value)](#messageiserrorvalue)
   - [Class: FastMQ.Response](#class-fastmqresponse)
     - [response.send(payload, contentType)](#responsesendpayload-contenttype)
+  - [List of Error Codes](#list-of-error-codes)
 
 ## Overview
 FastMQ is a node.js based message broker aims to let programmer easy to commuicate between different processes or machines.
@@ -583,10 +586,29 @@ An &lt;Object> contains information of message, the common parameters are listed
 * contentType: &lt;string> - the type of payload, possible values: 'json', 'raw', 'string'.
 * source: &lt;string> - the source channel of message, only avails on request/response message.
 * target: &lt;string> - the target channel of message, avails on all messages except ack. message.
+* error: &lt;Number> - the response error code, avails on response message.
 
 
 ### message.payload
 The message payload, the possible types are &lt;Object>|&lt;Buffer>|&lt;String>, and the type of payload depends on `message.header.contentType`.
+
+### message.setError(code)
+* `code`: &lt;Number> - error code
+
+Set error code, please refer [List of Error Codes](#list-of-error-codes)
+
+> This method only avails in response message (message.type === 'res)
+
+### message.isError(value)
+* `value`: &lt;Number|String> - error code or error name
+
+Check if the message has error, the `value` can be either error code or error name.
+
+Pleasr [List of Error Codes](#list-of-error-codes) for valid error name and error code.
+
+> This method only avails in response message (message.type === 'res)
+
+**Return Value**: &lt;Boolen>, `true` or `false`
 
 ---
 ## Class: FastMQ.Response
@@ -595,3 +617,9 @@ The helper class to send response message back.
 ### response.send(payload, contentType)
 * `payload`: &lt;Object>|&lt;Buffer>|&lt;String> - response payload, the type of this parameter depends on `contentType` parameter.
 * `contentType`: &lt;String> - content type of `payload`. Valid values: 'json', 'raw', 'string'.
+
+---
+## List of Error Codes
+* **REGISTER_FAIL**: 0x01 - *Register channel fail*
+* **TARGET_CHANNEL_NONEXIST**: 0x02 - *Reqeust target channel does not exist*
+* **TOPIC_NONEXIST**: 0x03 - *Target topic does not exist*
