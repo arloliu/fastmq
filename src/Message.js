@@ -348,8 +348,8 @@ class ResponseMessage extends RequestMessage {
         // this.header.type = 'res';
     }
 
-    isError(name) {
-        const errCode = ErrorCode[name];
+    isError(value) {
+        const errCode = (typeof value === 'string') ? ErrorCode[value] : code;
         if (errCode === undefined) {
             return false;
         }

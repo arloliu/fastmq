@@ -34,15 +34,19 @@ class TaskQueue {
     }
 
     _updateSubChannelCache(name) {
-        debug(`TaskQueue._updateSubChannelCache, name: ${name}`);
-        this._subChannelCache.forEach((value, key, map) => {
+        const matchedPatterns = [];
+        this._subChannelCache.forEach((value, key) => {
             const regex = new RegExp(key);
-            debug(`TaskQueue._updateSubChannelCache, key: ${regex}, name: ${name}`);
+            debug(`TaskQueue._updateSubChannelCache, key: ${key} regex source: ${regex.source}, name: ${name}`);
             if (regex.test(name)) {
-                debug(`TaskQueue._updateSubChannelCache, Find matched, remove channel cache: ${regex}`);
-                map.delete(key);
+                this._subChannelCache.delete(key);
+                matchedPatterns.push(regex);
             }
         });
+        for (const regex of matchedPatterns) {
+            const cache = this._findSubscribeChannels(regex);
+            debug(`TaskQueue._updateSubChannelCache, Find matched, update channel cache: ${regex.source}, cache len: ${cache.length}`);
+        }
     }
 
     addChannel(channel) {
@@ -87,7 +91,9 @@ class TaskQueue {
             const channel = this._channels[i];
             if (channel.name === name) {
                 this._channels.splice(i, 1);
-                isSubChannel = true;
+                if (channel.type === 'subscribe') {
+                    isSubChannel = true;
+                }
             }
         }
 
@@ -237,7 +243,7 @@ class TaskQueue {
 
         while (!taskQueue.isEmpty()) {
             const item = taskQueue.dequeue();
-            const subChannels = this._getSubscribeChannels(item.targetRegExp);
+            const subChannels = this._findSubscribeChannels(item.targetRegExp);
             const subChannelLength = subChannels.length;
 
             debug(`item target: ${item.targetRegExp.toString()}, subChannelLength: ${subChannelLength}`);
@@ -281,10 +287,11 @@ class TaskQueue {
         return avail;
     }
 
-    _getSubscribeChannels(regexp) {
+    _findSubscribeChannels(regexp) {
         const cacheKey = regexp.source;
         const cache = this._subChannelCache.get(cacheKey);
         if (cache) {
+            debug(`Subscribe channel cache found. len: ${cache.length}`);
             return cache;
         }
 
@@ -296,6 +303,7 @@ class TaskQueue {
                 channels.push(channel);
             }
         }
+        debug(`Set _subChannelCache, cacheKey: ${cacheKey}`);
         this._subChannelCache.set(cacheKey, channels);
         return channels;
     }
