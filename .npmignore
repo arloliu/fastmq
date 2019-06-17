@@ -1,7 +1,11 @@
 # source tree
 src
 examples
-
+doc
+webpack.config.js
+yarn.lock
+.babelrc
+.eslint*
 # Logs
 logs
 *.log
@@ -15,9 +19,6 @@ pids
 *.seed
 *.pid.lock
 
-# Compiled binary addons (http://nodejs.org/api/addons.html)
-build/Release
-
 # Dependency directories
 node_modules/
 
@@ -25,11 +26,9 @@ node_modules/
 # Optional npm cache directory
 .npm
 
-# Optional eslint cache
-.eslintcache
-
-# Yarn Integrity file
+# Yarn Integrity & lock file
 .yarn-integrity
+yarn.lock
 
 # dotenv environment variables file
 .env
