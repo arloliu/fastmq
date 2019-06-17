@@ -191,6 +191,44 @@ class Server {
 
             res.send({ result: channel ? true : false }, 'json');
         };
+
+        this._requestHandlers.getChannels = (msg, res) => {
+            const channelName = msg.payload.channelName;
+            const type = msg.payload.type;
+            if (!_.isString(channelName)
+                || !_.isString(type)
+                || (type !== 'regexp' && type !== 'glob')
+            ) {
+                res.setError(ErrorCode.INVALID_PARAMETER);
+                res.send({ channels: [] }, 'json');
+                return;
+            }
+            const channelNameArg = (type === 'regexp') ? new RegExp(channelName) : channelName;
+            const channelNames = this._channels.findChannelNames(channelNameArg);
+
+            res.send({ channels: channelNames }, 'json');
+        };
+
+        this._requestHandlers.watchChannels = (msg, res) => {
+            const channelName = msg.payload.channelName;
+            if (!_.isString(channelName)) {
+                res.setError(ErrorCode.INVALID_PARAMETER);
+                res.send({ result: false }, 'json');
+                return;
+            }
+            const info = this._channels.addMonitor(channelName, res.socket);
+            if (!info) {
+                res.setError(ErrorCode.CHANNEL_NONEXIST);
+                res.send({ result: false }, 'json');
+                return;
+            }
+
+            res.send({
+                result: true,
+                channelPattern: info.channelPattern,
+                channelNames: info.channelNames,
+            }, 'json');
+        };
     }
 
     start() {
@@ -299,6 +337,7 @@ class Server {
         });
         /* eslint-disable handle-callback-err */
         socket.on('error', (err) => {
+            debug('socket error:', err.message);
             socket.unref();
         });
         /* eslint-enable handle-callback-err */

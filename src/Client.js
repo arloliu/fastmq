@@ -27,12 +27,15 @@ class Channel {
         this._responseEvent = new EventEmitter();
         this._subEvent = new EventEmitter();
         this._pullEvent = new EventEmitter();
+        this._monitorEvent = new EventEmitter();
         this._internalEvent = new EventEmitter();
 
         this._eventStore = {
             'sub': [],
             'pull': [],
         };
+
+        this._watchChannelStore = new Map();
 
         this._messageHandler = this._messageHandler.bind(this);
         this._msgReceiver = new MessageReceiver(this._messageHandler);
@@ -45,22 +48,27 @@ class Channel {
     _messageHandler(msg, rawBuf, socket) {
         if (msg.isRequest()) {
             const res = new Response(msg, socket);
-            process.nextTick(() => {
+            setImmediate(() => {
                 this._requestEvent.emit(msg.header.topic, msg, res);
             });
         } else if (msg.isResponse()) {
-            process.nextTick(() => {
+            setImmediate(() => {
                 this._responseEvent.emit(msg.getEventName(), msg);
             });
         } else if (msg.isPull()) {
             // debug('Got pull message\n# Header:\n', msg.header, '\n# Payload:', msg.payload);
-            process.nextTick(() => {
+            setImmediate(() => {
                 this._pullEvent.emit(msg.header.topic, msg);
             });
         } else if (msg.isSubscribe()) {
             // debug('Got subscribe message\n# Header:\n', msg.header, '\n# Payload:', msg.payload);
-            process.nextTick(() => {
+            setImmediate(() => {
                 this._subEvent.emit(msg.header.topic, msg);
+            });
+        } else if (msg.isMonitor()) {
+            debug('Got monitor message\n# Header:\n', msg.header, '\n# Payload:', msg.payload);
+            setImmediate(() => {
+                this._monitorEvent.emit(msg.payload.channelPattern, msg);
             });
         }
     }
@@ -256,6 +264,63 @@ class Channel {
                     this.name = msg.payload.channelName;
                 }
                 return this;
+            }
+        });
+    }
+
+    getChannels(name, type) {
+        if (!_.isString(name)) {
+            return Promise.reject(new Error('get channel fail, channel name must be string type'));
+        }
+        const parameters = {
+            channelName: name,
+            type: type ? type : 'glob',
+        };
+
+        return this._serverRequest('getChannels', parameters).then((msg) => {
+            if (msg.header.error) {
+                const err = new Error('get channel fail. errCode:' + msg.header.error);
+                throw err;
+            } else {
+                if (!_.isArray(msg.payload.channels)) {
+                    throw new Error('channel list should be array type');
+                }
+                return msg.payload.channels;
+            }
+        });
+    }
+
+    watchChannels(name, callback) {
+        if (!_.isString(name)) {
+            return Promise.reject(new Error('get channel fail, channel name must be string type'));
+        }
+        return this._serverRequest('watchChannels', {channelName: name}).then((msg) => {
+            if (msg.header.error) {
+                const err = new Error('get channel fail. errCode:' + msg.header.error);
+                throw err;
+            } else {
+                if (!_.isString(msg.payload.channelPattern)) {
+                    throw new Error('channelPattern should be string type');
+                }
+                if (!_.isArray(msg.payload.channelNames)) {
+                    throw new Error('channelNames should be array type');
+                }
+
+                const channelPattern = msg.payload.channelPattern;
+
+                this._watchChannelStore.set(channelPattern, msg.payload.channelNames);
+
+                this._monitorEvent.on(channelPattern, (monMsg) => {
+                    const payload = monMsg.payload;
+                    const channels = this._watchChannelStore.get(channelPattern);
+                    if (payload.action === 'add') {
+                        channels.push(payload.channel);
+                    } else if (payload.action === 'remove') {
+                        _.pull(channels, payload.channel);
+                    }
+
+                    callback(payload.action, payload.channel, channels);
+                });
             }
         });
     }

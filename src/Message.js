@@ -11,6 +11,7 @@ const MSG_TYPE = {
     pub: 5,
     sub: 6,
     ack: 7,
+    mon: 0xf0,
     sreq: 0xff,
 };
 const MSG_CONTENT_TYPE = { raw: 1, json: 2, str: 3 };
@@ -30,6 +31,7 @@ MessageType {
     pub: 5,
     sub: 6,
     ack: 7,
+    smon: 0xf0,
     sreq: 0xff,
 }
 
@@ -95,6 +97,13 @@ AckHeader {
     topicLen:    uint8, topic length
     topic:       <topicLen> bytes, string, message topic
 }
+
+MonitorHeader {
+    id:          uint64, unique message id
+    type:        uint8, message type, valid value: <MessageType>
+    contentType: uint8, Number, valid value: <ContentType>
+}
+
 
 PushPayloadItem {
     length: uint32, item length
@@ -197,6 +206,9 @@ class Message {
     }
     isAck() {
         return this.header.type === 'ack';
+    }
+    isMonitor() {
+        return this.header.type === 'mon';
     }
 
     getEventName() {
@@ -707,6 +719,38 @@ class AckMessage extends Message {
     }
 }
 
+class MonitorMessage extends Message {
+    constructor(id, msgLen, headerLen) {
+        super('mon', id, msgLen, headerLen);
+    }
+
+    createFromBuffer(buf) {
+        const headerBuf = buf.slice(8, 8 + this.headerLength);
+        const headerBufStream = new BufferStream(headerBuf);
+
+        headerBufStream.offset = 9;
+        this.header.contentType = getContentType(headerBufStream.readUInt8());
+
+        const payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
+        this.payload = parsePayloadBuffer(payloadBuf, this.header.contentType);
+        return this;
+    }
+
+    _getHeaderBuffer() {
+        const header = this.header;
+
+        const headerLen = 10;
+        const headerBuf = Buffer.alloc(headerLen);
+
+        const bufStream = new BufferStream(headerBuf);
+        bufStream.writeUInt64BE(header.id);
+        bufStream.writeUInt8(MSG_TYPE[header.type]);
+        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
+
+        return bufStream.get();
+    }
+}
+
 // Factory function to create Message object by type.
 exports.create = function(type, id) {
     if (type === 'req') {
@@ -723,6 +767,8 @@ exports.create = function(type, id) {
         return new SubscribeMessage(id);
     } else if (type === 'ack') {
         return new AckMessage(id);
+    } else if (type === 'mon') {
+        return new MonitorMessage(id);
     } else if (type === 'sreq') {
         return new ServerRequestMessage(id);
     } else {
@@ -753,6 +799,8 @@ exports.createFromBuffer = function(buf) {
         msg = new SubscribeMessage(id, msgLen, headerLen);
     } else if (type === 'ack') {
         msg = new AckMessage(id, msgLen, headerLen);
+    } else if (type === 'mon') {
+        msg = new MonitorMessage(id, msgLen, headerLen);
     } else if (type === 'sreq') {
         msg = new ServerRequestMessage(id, msgLen, headerLen);
     } else {

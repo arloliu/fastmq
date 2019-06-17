@@ -2,6 +2,7 @@
 const globToRegExp = require('glob-to-regexp');
 const util = require('util');
 const debug = util.debuglog('fastmq');
+const Message = require('./Message.js');
 
 function getRandomInt(min, max) {
     const minVal = Math.ceil(min);
@@ -12,6 +13,7 @@ function getRandomInt(min, max) {
 class ChannelManager {
     constructor() {
         this._channels = {};
+        this._monitorChannels = new Map();
         this._channelCache = new Map();
     }
 
@@ -30,11 +32,11 @@ class ChannelManager {
     }
 
     _updateChannelCache(name) {
-        debug(`ChannelManager._updateChannelCache, name: ${name}`);
+        // debug(`ChannelManager._updateChannelCache, name: ${name}`);
         const matchedPatterns = [];
         this._channelCache.forEach((value, key, map) => {
             const regex = new RegExp(key);
-            debug(`ChannelManager._updateChannelCache, regex: ${regex.toString()}, name: ${name}`);
+            // debug(`ChannelManager._updateChannelCache, regex: ${regex.toString()}, name: ${name}`);
             if (regex.test(name)) {
                 const cacheKey = regex.source;
                 map.delete(cacheKey);
@@ -42,10 +44,30 @@ class ChannelManager {
             }
         });
         for (const regex of matchedPatterns) {
-            debug(`ChannelManager._updateChannelCache, find matched, update channel cache: ${regex.source}`);
+            // debug(`ChannelManager._updateChannelCache, find matched, update channel cache: ${regex.source}`);
             // update new cache
             this.find(regex);
         }
+    }
+
+    _notifyMonitorChannel(action, name) {
+        this._monitorChannels.forEach((channels, key) => {
+            const regex = new RegExp(key);
+            if (regex.test(name)) {
+                const msg = Message.create('mon');
+                msg.setContentType('json');
+                msg.setPayload({
+                    action: action,
+                    channelPattern: key,
+                    channel: name,
+                });
+
+                const msgBuf = msg.getBuffer();
+                channels.forEach((socket) => {
+                    socket.write(msgBuf);
+                });
+            }
+        });
     }
 
     register(name, socket) {
@@ -57,11 +79,15 @@ class ChannelManager {
             socket: socket,
             handlers: {},
         };
+        this._notifyMonitorChannel('add', name);
         this._updateChannelCache(name);
     }
 
     unregister(name) {
         debug('unregister channel name: ' + name);
+        const socket = this._channels[name].socket;
+        this._notifyMonitorChannel('remove', name);
+        this.removeMontior(socket);
         delete this._channels[name];
         this._updateChannelCache(name);
     }
@@ -96,8 +122,63 @@ class ChannelManager {
         return this._add('subscribe', name, topic, options);
     }
 
+    addMonitor(channelName, socket) {
+        let channelFound = false;
+        let channel;
+        /* eslint-disable-next-line guard-for-in */
+        for (const key in this._channels) {
+            channel = this._channels[key];
+            if (channel.socket === socket) {
+                channelFound = true;
+                break;
+            }
+        }
+        if (!channelFound) {
+            return false;
+        }
+
+        const regex = (channelName instanceof RegExp) ? channelName : globToRegExp(channelName);
+        const key = regex.source;
+        const availChannels = this._monitorChannels.get(key);
+
+        if (availChannels) {
+            availChannels.add(channel.socket);
+            this._monitorChannels.set(key, availChannels);
+        } else {
+            this._monitorChannels.set(key, new Set([channel.socket]));
+        }
+        debug(`addMonitor key=${key}`);
+        const channelNames = this.findChannelNames(regex);
+        return {
+            channelPattern: key,
+            channelNames: channelNames,
+        };
+    }
+
+    removeMontior(socket) {
+        this._monitorChannels.forEach((channels, key) => {
+            if (channels.has(socket)) {
+                debug(`removeMontior channel: ${this.findBySocket(socket).name}`);
+                channels.delete(socket);
+            }
+        });
+    }
+
     get(name) {
         return this.has(name) ? this._channels[name] : null;
+    }
+
+    findChannelNames(pattern) {
+        const re = (pattern instanceof RegExp) ? pattern : globToRegExp(pattern);
+
+        const channelNames = [];
+        for (const key in this._channels) {
+            if (re.test(key)) {
+                channelNames.push(key);
+            }
+        }
+
+        return channelNames;
     }
 
     find(pattern) {
@@ -118,6 +199,15 @@ class ChannelManager {
         debug('set channel cache, key: ', cacheKey);
         this._channelCache.set(cacheKey, channels);
         return channels;
+    }
+
+    findBySocket(socket) {
+        for (const key in this._channels) {
+            if (this._channels[key].socket === socket) {
+                return this._channels[key];
+            }
+        }
+        return null;
     }
 
     findResponseTopic(pattern, topic) {
@@ -166,38 +256,6 @@ class ChannelManager {
             }
         }
         return matchedChannels;
-        // const channels = [];
-        // const re = globToRegExp(pattern);
-        // const cacheKey = re.source;
-        // const cache = this._channelCache.get(cacheKey);
-        // if (cache) {
-        //     for (const key in cache) {
-        //         if (!Object.hasOwnProperty.call(cache, key)) {
-        //             continue;
-        //         }
-        //         const channel = this._channels[key];
-        //         const handlers = channel.handlers;
-        //         if (handlers.hasOwnProperty(topic) && handlers[topic].type === type) {
-        //             // debug(`got channel ${key} by type: ${type}, topic: ${topic}`);
-        //             channels.push(channel);
-        //         }
-        //     }
-        // } else {
-        //     for (const key in this._channels) {
-        //         if (!Object.hasOwnProperty.call(this._channels, key)) {
-        //             continue;
-        //         }
-        //         if (re.test(key) || key === pattern) {
-        //             const channel = this._channels[key];
-        //             const handlers = channel.handlers;
-        //             if (handlers.hasOwnProperty(topic) && handlers[topic].type === type) {
-        //                 // debug(`got channel ${key} by type: ${type}, topic: ${topic}`);
-        //                 channels.push(channel);
-        //             }
-        //         }
-        //     }
-        // }
-        // return channels;
     }
 }
 
