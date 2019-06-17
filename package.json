@@ -27,7 +27,7 @@
   "scripts": {
     "build": "webpack",
     "watch": "webpack -w",
-    "eslint": "eslint src"
+    "eslint": "eslint src examples"
   },
   "dependencies": {
     "@babel/runtime": "^7.3.4",

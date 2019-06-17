@@ -1,5 +1,4 @@
-const FastMQ = require('../../src');
-
+const FastMQ = process.env.NODE_DEBUG ? require('../../src/index.js') : require('../../lib/index.js');
 
 FastMQ.Client.connect('', {
     host: '127.0.0.1',

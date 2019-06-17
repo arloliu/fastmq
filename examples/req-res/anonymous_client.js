@@ -1,11 +1,9 @@
-const FastMQ = require('../../lib/index.js');
-
+const FastMQ = process.env.NODE_DEBUG ? require('../../src/index.js') : require('../../lib/index.js');
 
 async function test() {
     try {
         const reqChannel = await FastMQ.Client.connect(null, 'master');
         const resChannel = await FastMQ.Client.connect(null, 'master');
-        const res2Channel = await FastMQ.Client.connect(null, 'master');
 
         console.log(`request channel name: ${reqChannel.name} response channel name: ${resChannel.name}`);
 

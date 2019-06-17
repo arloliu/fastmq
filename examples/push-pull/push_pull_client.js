@@ -1,4 +1,5 @@
-const FastMQ = require('../../lib/index.js');
+const FastMQ = process.env.NODE_DEBUG ? require('../../src/index.js') : require('../../lib/index.js');
+
 const serverChannel = 'master';
 let pullChannel1;
 let pullChannel2;

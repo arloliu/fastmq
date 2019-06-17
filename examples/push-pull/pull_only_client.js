@@ -1,6 +1,7 @@
-const FastMQ = require('../../lib/index.js');
+const FastMQ = process.env.NODE_DEBUG ? require('../../src/index.js') : require('../../lib/index.js');
+
 const serverChannel = 'master';
-var pullChannel;
+let pullChannel;
 FastMQ.Client.connect('pullChannel', serverChannel)
 .then((ch) => {
     pullChannel = ch;
