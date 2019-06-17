@@ -321,6 +321,11 @@ class Channel {
 
                     callback(payload.action, payload.channel, channels);
                 });
+
+                return {
+                    channelPattern: channelPattern,
+                    channels: msg.payload.channelNames,
+                };
             }
         });
     }

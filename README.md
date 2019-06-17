@@ -2,44 +2,46 @@
 > High performance message broker for node.js with multiple network transports support.
 
 **Table of Contents**
-- [FastMQ](#fastmq)
-  - [Overview](#overview)
-  - [Features](#features)
-  - [Installation](#installation)
-  - [Examples](#examples)
-    - [Simple REQUEST/RESPONSE server and client](#simple-requestresponse-server-and-client)
-    - [Simple REQUEST/RESPONSE pattern between two clients](#simple-requestresponse-pattern-between-two-clients)
-    - [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#simple-pushpull-pattern-one-push-two-pull-workers)
-    - [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#simple-publishsubscribe-pattern-one-publish-two-subscribe-channels)
-- [API](#api)
-  - [FastMQ.Server.create(name)](#fastmqservercreatename)
-  - [FastMQ.Server.create(name, port[, host])](#fastmqservercreatename-port-host)
-  - [Class: FastMQ.Server](#class-fastmqserver)
+- [FastMQ](#FastMQ)
+  - [Overview](#Overview)
+  - [Features](#Features)
+  - [Installation](#Installation)
+  - [Examples](#Examples)
+    - [Simple REQUEST/RESPONSE server and client](#Simple-REQUESTRESPONSE-server-and-client)
+    - [Simple REQUEST/RESPONSE pattern between two clients](#Simple-REQUESTRESPONSE-pattern-between-two-clients)
+    - [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#Simple-PUSHPULL-pattern-one-PUSH-two-PULL-workers)
+    - [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#Simple-PUBLISHSUBSCRIBE-pattern-one-PUBLISH-two-SUBSCRIBE-channels)
+- [API](#API)
+  - [FastMQ.Server.create(name)](#FastMQServercreatename)
+  - [FastMQ.Server.create(name, port[, host])](#FastMQServercreatename-port-host)
+  - [Class: FastMQ.Server](#Class-FastMQServer)
     - [server.start()](#serverstart)
     - [server.stop()](#serverstop)
-    - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contenttype--json)
+    - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contentType--json)
     - [server.response(topic, listener)](#serverresponsetopic-listener)
-  - [FastMQ.Client.connect(channelName, path[, connectListener])](#fastmqclientconnectchannelname-path-connectlistener)
-  - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#fastmqclientconnectchannelname-port-host-connectlistener)
-  - [FastMQ.Client.connect(channelName, options[, connectListener])](#fastmqclientconnectchannelname-options-connectlistener)
-  - [Class: FastMQ.Channel](#class-fastmqchannel)
-    - [channel.onError(listener)](#channelonerrorlistener)
-    - [channel.onReconnect(listener)](#channelonreconnectlistener)
+  - [FastMQ.Client.connect(channelName, path[, connectListener])](#FastMQClientconnectchannelName-path-connectListener)
+  - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#FastMQClientconnectchannelName-port-host-connectListener)
+  - [FastMQ.Client.connect(channelName, options[, connectListener])](#FastMQClientconnectchannelName-options-connectListener)
+  - [Class: FastMQ.Channel](#Class-FastMQChannel)
+    - [channel.onError(listener)](#channelonErrorlistener)
+    - [channel.onReconnect(listener)](#channelonReconnectlistener)
     - [channel.disconnect(graceful)](#channeldisconnectgraceful)
-    - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contenttype--json)
+    - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contentType--json)
     - [channel.response(topic, listener)](#channelresponsetopic-listener)
-    - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contenttype--json)
+    - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contentType--json)
     - [channel.pull(topic, options, listener)](#channelpulltopic-options-listener)
-    - [channel.publish(target, topic, payload, contentType = 'json')](#channelpublishtarget-topic-payload-contenttype--json)
+    - [channel.publish(target, topic, payload, contentType = 'json')](#channelpublishtarget-topic-payload-contentType--json)
       - [channel.subscribe(topic, listener)](#channelsubscribetopic-listener)
-  - [Class: FastMQ.Message](#class-fastmqmessage)
+      - [channel.getChannels(name[, type])](#channelgetChannelsname-type)
+      - [channel.watchChannels(name, callback)](#channelwatchChannelsname-callback)
+  - [Class: FastMQ.Message](#Class-FastMQMessage)
     - [message.header](#messageheader)
     - [message.payload](#messagepayload)
-    - [message.setError(code)](#messageseterrorcode)
-    - [message.isError(value)](#messageiserrorvalue)
-  - [Class: FastMQ.Response](#class-fastmqresponse)
-    - [response.send(payload, contentType)](#responsesendpayload-contenttype)
-  - [List of Error Codes](#list-of-error-codes)
+    - [message.setError(code)](#messagesetErrorcode)
+    - [message.isError(value)](#messageisErrorvalue)
+  - [Class: FastMQ.Response](#Class-FastMQResponse)
+    - [response.send(payload, contentType)](#responsesendpayload-contentType)
+  - [List of Error Codes](#List-of-Error-Codes)
 
 ## Overview
 FastMQ is a node.js based message broker aims to let programmer easy to commuicate between different processes or machines.
@@ -575,6 +577,50 @@ This method returns current channel object, which can be used as Method Chaining
 
 **Return Value**: An &lt;FastMQ.Channel> object.
 
+#### channel.getChannels(name[, type])
+* `name`: &lt;String> - glob or regular expression to get matched channel
+* `type`: &lt;String> - Optional - type of expression, valid types are: `glob` and `regexp`, defaults to `glob`
+
+Retreive list of matched channel names by `name`
+
+> New Method Since `v1.3.0`
+
+**Return Value**: A &lt;Aarray> contains matched channel names
+
+#### channel.watchChannels(name, callback)
+* `name`: &lt;String> - glob expression of channel names to be watched
+* `callback`: &lt;Function> - callback function when the status of watched channels changed
+
+Watch channels by `name`, and trigger `callback` when status changed.
+
+`callback` contains three arguments:
+* `action`: &lt;String> - the action of status changed, possible value are: `add` and `remove`, which respecting to channel joined to / removed from watch scope 
+* `channel`: &lt;String> - the changed channel name
+* `channels`: &lt;Array> - the list of channels names in current watch scope
+
+The watch scope is settle by `name` expression, and the `callback` will be trigged each time when any channel joined into watch scope or removed from watch scope.
+
+**Return Value**: An &lt;Object> contains `channelPattern` and `channels` attributes.
+
+* `channelPattern`: &lt;String> - The regular expression style expression to represent current watch scope. Can be used as `name` with 'regexp' `type` to call `channel.getChannels` method later.
+* `channels`: &lt;Array> - the list of channels names in current watch scope.
+
+
+Example to watch all channels matching to `'channel.*'` glob expression:
+```js
+    const info = channel.watchChannels('channel.*', (action, channel, channels) => {
+        if (action === 'add') {
+            console.log(`Channel <${channel}> joined, count of channels: ${channels.length}`);
+        } else {
+            console.log(`Channel <${channel}> removed, count of channels: ${channels.length}`);
+        }
+        console.log('List of channels:' + JSON.stringify(channels));
+    });
+
+    console.log(`The expression of watch scope: ${info.channelPattern}`);
+    console.log(`List of current watched channels: ${JSON.stringify(info.channels)}`);
+```
+
 ---
 ## Class: FastMQ.Message
 An abstract class presents variety of messages like REQUEST/RESPONSE/PUSH/PULL/PUBLISH/SUBSCRIBE message.
@@ -620,6 +666,10 @@ The helper class to send response message back.
 
 ---
 ## List of Error Codes
-* **REGISTER_FAIL**: 0x01 - *Register channel fail*
-* **TARGET_CHANNEL_NONEXIST**: 0x02 - *Reqeust target channel does not exist*
-* **TOPIC_NONEXIST**: 0x03 - *Target topic does not exist*
+| Name                    | Code | Description                    |
+|-------------------------|------|--------------------------------|
+| REGISTER_FAIL           | 0x01 | Register channel fail          |
+| TARGET_CHANNEL_NONEXIST | 0x02 | Target channel does not existl |
+| TOPIC_NONEXIST          | 0x03 | Target topic does not existl   |
+| CHANNEL_NONEXIST        | 0x04 | Channel does not exist         |
+| INVALID_PARAMETER       | 0x05 | Invliad parameter in payload   |
