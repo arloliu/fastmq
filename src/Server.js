@@ -353,6 +353,7 @@ class Server {
             const channel = this._channels.unregisterBySocket(socket);
             if (channel) {
                 this._queueManager.removeChannels(channel);
+                this._msgReceiver.removeSocket(socket);
                 debug(`Un-register channel '${channel}'`);
             }
         });
@@ -363,6 +364,7 @@ class Server {
             if (socket && socket.destroy) {
                 socket.destroy();
             }
+            this._msgReceiver.removeSocket(socket);
         });
         this._sockets = [];
         this._channels.unregisterAll();

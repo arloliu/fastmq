@@ -804,7 +804,7 @@ exports.createFromBuffer = function(buf) {
     } else if (type === 'sreq') {
         msg = new ServerRequestMessage(id, msgLen, headerLen);
     } else {
-        throw new TypeError(`Message type:${type} is not valid.`);
+        throw new TypeError(`Message type:${type}:${buf.readUInt8(16)} is not valid.`);
     }
 
     msg.createFromBuffer(buf);

@@ -108,6 +108,9 @@ class Channel {
             this._socket.on('error', (err) => {
                 this._needReconnect = true;
                 this._internalEvent.emit('error', err);
+                if (!this._connected && !this._options.reconnect) {
+                    reject(err);
+                }
             });
 
             this._socket.on('connect', () => {
@@ -144,6 +147,7 @@ class Channel {
                     if (cbStyle) {
                         this._options.connectListener(err, this);
                     } else {
+                        debug('connect reject:', err);
                         reject(err);
                     }
                 });
@@ -158,18 +162,19 @@ class Channel {
                 this._socket.destroy();
                 this._socket.unref();
                 this._socket = null;
-                debug('client close');
+
+                if (!this._options.reconnect || this._connected || !this._needReconnect) {
+                    return;
+                }
+
                 this.reconnect();
             });
         });
     }
 
     reconnect() {
-        if (this._connected || !this._needReconnect) {
-            return;
-        }
         setTimeout(() => {
-            debug('reconnect');
+            debug('reconnect, interval:', this._options.reconnectInterval);
             this.connect(true).then(() => {
                 this._internalEvent.emit('reconnect');
             });
@@ -408,6 +413,7 @@ class Channel {
             msg.setTopic(topic);
             msg.setTarget(target);
             msg.setPayload(data, contentType);
+
             this._socket.write(msg.getBuffer(), 'utf8', () => {
                 resolve();
             });
@@ -476,12 +482,17 @@ exports.connect = function(...args) {
     };
     // process options, port or serverPath
     if (_.isPlainObject(args[1])) {
-        const opts = args[1];
+        const opts = _.cloneDeep(args[1]);
+        if (_.isString(opts.path)) {
+            opts.path = getSocketPath(opts.path);
+        }
         options = _.merge(defaultOptions, opts);
     } else if (_.isString(args[1])) {
         options.path = getSocketPath(args[1]);
+        options = _.merge(defaultOptions, options);
     } else if (_.isNumber(args[1])) {
         options.port = args[1];
+        options = _.merge(defaultOptions, options);
     }
 
     if (args.length > 2 && _.isString(args[2])) {
