@@ -1,4 +1,4 @@
-const FastMQ = require('../lib/index.js');
+const FastMQ = process.env.NODE_DEBUG ? require('../src/index.js') : require('../lib/index.js');
 
 const server = FastMQ.Server.create('master', 7500);
 

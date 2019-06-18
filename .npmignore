@@ -35,3 +35,4 @@ yarn.lock
 
 # sublime files
 *.sublime*
+.vscode
