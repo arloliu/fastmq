@@ -54,7 +54,8 @@ class Server {
         this._handleConnection = this._handleConnection.bind(this);
         this._handleServerError = this._handleServerError.bind(this);
 
-        this._handleSocketError = undefined;
+        this._extSocketErrorHandler = undefined;
+        this._extErrorHandler = undefined;
 
         // register server channel first
         this._channels.register(this.channel, null);
@@ -255,8 +256,12 @@ class Server {
         });
     }
 
+    onError(handler) {
+        this._extErrorHandler = handler;
+    }
+
     onSocketError(handler) {
-        this._handleSocketError = handler;
+        this._extSocketErrorHandler = handler;
     }
 
     // Send request to client channel
@@ -344,8 +349,8 @@ class Server {
         /* eslint-disable handle-callback-err */
         socket.on('error', (err) => {
             debug('socket error:', err.message);
-            if (_.isFunction(this._handleSocketError)) {
-                this._handleSocketError(err, socket);
+            if (_.isFunction(this._extSocketErrorHandler)) {
+                this._extSocketErrorHandler(err, socket);
             }
             socket.destroy();
         });
@@ -391,7 +396,10 @@ class Server {
                 this._server.listen(this._serverOptions);
             }, 300);
         } else {
-            debug('Message broker server got error:', error.stack);
+            debug('Message broker server got error:', err.stack);
+            if (_.isFunction(this._extErrorHandler)) {
+                this._extErrorHandler(err);
+            }
         }
     }
 }

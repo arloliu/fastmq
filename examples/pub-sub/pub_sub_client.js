@@ -79,7 +79,7 @@ async function test() {
         console.log('Disconnect channel:', subChannel2.name);
         // remove subChannel2
         await subChannel2.disconnect(true);
-    
+
         for (let i = 20; i < 30; i++) {
             const payload = {
                 message: (i + 1),
