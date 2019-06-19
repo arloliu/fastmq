@@ -9,7 +9,7 @@ const argv = require('minimist')(process.argv.slice(2), {
         'p': 'pub_ch',
         'l': 'loop',
         't': 'tcp',
-        'm': 'msg_size',
+        'm': 'msg_count',
         'f': 'forever',
         'h': 'help',
     },
@@ -19,29 +19,31 @@ const argv = require('minimist')(process.argv.slice(2), {
         'pub_ch': 10,
         'loop': 200,
         'tcp': false,
-        'msg_size': 10,
+        'msg_count': 10,
         'forever': false,
         'help': false,
     },
 });
 
 if (argv.help) {
-    console.log(`Usage: ${path.basename(process.argv[1])} -s|--sub_ch -p|--pub_ch -l|--loop -t|--tcp -m|--msg_size -f|--forever -h|--help`);
+    console.log(`Usage: ${path.basename(process.argv[1])} -s|--sub_ch -p|--pub_ch -l|--loop -t|--tcp -m|--MSG_COUNT -f|--forever -h|--help`);
     process.exit(0);
 }
 
 const SUB_CHANNEL_COUNT = argv.sub_ch;
 const PUB_CHANNEL_COUNT = argv.pub_ch;
 const LOOP_COUNT = argv.loop;
-const MSG_SIZE = argv.msg_size;
+const MSG_COUNT = argv.msg_count;
 const TOTAL_COUNT = (SUB_CHANNEL_COUNT * LOOP_COUNT * PUB_CHANNEL_COUNT);
 const PubMessages = [];
 
+let totalPubMsgBytes = 0;
 for (let ch = 0; ch < PUB_CHANNEL_COUNT; ch++) {
     const msg = {};
-    for (let i = 0; i < MSG_SIZE; i++) {
+    for (let i = 0; i < MSG_COUNT; i++) {
         msg[`f${i}`] = `field data ${_.random(100, 10000000, false)}`;
     }
+    totalPubMsgBytes += Buffer.byteLength(JSON.stringify(msg));
     PubMessages.push(msg);
 }
 
@@ -49,7 +51,7 @@ console.log(`Large scale publish/subscribe test
 * Publish Channels: ${PUB_CHANNEL_COUNT}
 * Subscribe Channels: ${SUB_CHANNEL_COUNT}
 * Iterations: ${LOOP_COUNT}
-* Message size: ${MSG_SIZE}
+* Avg. Message bytes: ${Number.parseFloat(totalPubMsgBytes / PUB_CHANNEL_COUNT).toFixed(0)} bytes
 * TCP mode: ${argv.tcp}
 * Forever mode: ${argv.forever}
 `);
@@ -96,9 +98,12 @@ async function test() {
         reconnect: false,
     } : { path: 'master', reconnect: false };
 
+    const pubTargetChannelPrefix = `subChannel.${_.random(1000, 10000)}`;
+    const subChannelName = `${pubTargetChannelPrefix}.#`;
+    console.log('Channel connecting.');
     try {
         for (let i = 0; i < SUB_CHANNEL_COUNT; i++) {
-            const channel = await FastMQ.Client.connect('subChannel.#', connectOption);
+            const channel = await FastMQ.Client.connect(subChannelName, connectOption);
             channel.onError(errorHandler);
             subChannels.push(channel);
 
@@ -114,6 +119,7 @@ async function test() {
         process.exit(1);
     }
 
+    console.log('Start tests.');
     if (argv.forever) {
         timer = setInterval(() => {
             for (let ch = 0; ch < PUB_CHANNEL_COUNT; ch++) {
@@ -122,7 +128,7 @@ async function test() {
                     loop: 0,
                     message: PubMessages[ch],
                 };
-                pubChannels[ch].publish('subChannel.*', 'testTopic', payload, 'json');
+                pubChannels[ch].publish(`${pubTargetChannelPrefix}.*`, 'testTopic', payload, 'json');
             }
         }, 10);
 
@@ -135,7 +141,6 @@ async function test() {
             console.log(`Receive subscribe message: ${ops} operations/sec.`);
             foreverCounter = 0;
         }, 1000);
-
     } else {
         const publishJobs = [];
         for (let i = 0; i < LOOP_COUNT; i++) {
