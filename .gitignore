@@ -32,3 +32,6 @@ node_modules/
 
 # sublime files
 *.sublime-workspace
+
+# vscode settings
+.vscode
