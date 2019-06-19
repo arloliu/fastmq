@@ -2,6 +2,10 @@ const FastMQ = process.env.NODE_DEBUG ? require('../src/index.js') : require('..
 
 const server = FastMQ.Server.create('master', 7500);
 
+server.onSocketError((err, socket) => {
+    console.error('Server socket error:', err.stack);
+});
+
 server.response('test_cmd_json', (msg, res) => {
     const resData = { num: msg.payload.num + 1 };
     res.send(resData, 'json');

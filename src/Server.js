@@ -54,6 +54,8 @@ class Server {
         this._handleConnection = this._handleConnection.bind(this);
         this._handleServerError = this._handleServerError.bind(this);
 
+        this._handleSocketError = undefined;
+
         // register server channel first
         this._channels.register(this.channel, null);
     }
@@ -253,6 +255,10 @@ class Server {
         });
     }
 
+    onSocketError(handler) {
+        this._handleSocketError = handler;
+    }
+
     // Send request to client channel
     request(target, topic, data = {}, contentType = 'json') {
         return new Promise((resolve, reject) => {
@@ -338,7 +344,10 @@ class Server {
         /* eslint-disable handle-callback-err */
         socket.on('error', (err) => {
             debug('socket error:', err.message);
-            socket.unref();
+            if (_.isFunction(this._handleSocketError)) {
+                this._handleSocketError(err, socket);
+            }
+            socket.destroy();
         });
         /* eslint-enable handle-callback-err */
 
