@@ -19,6 +19,8 @@
     - [server.stop()](#serverstop)
     - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contentType--json)
     - [server.response(topic, listener)](#serverresponsetopic-listener)
+    - [server.onError(handler)](#serveronErrorhandler)
+    - [server.onSocketError(handler)](#serveronSocketErrorhandler)
   - [FastMQ.Client.connect(channelName, path[, connectListener])](#FastMQClientconnectchannelName-path-connectListener)
   - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#FastMQClientconnectchannelName-port-host-connectListener)
   - [FastMQ.Client.connect(channelName, options[, connectListener])](#FastMQClientconnectchannelName-options-connectListener)
@@ -382,6 +384,15 @@ server.response('topic1', listener1).response('topic2', listener2);
 
 **Return Value**: An &lt;FastMQ.Server> object.
 
+### server.onError(handler)
+* `handler`: &lt;Function> - The callback to handle server error event.
+
+Register callback handler for server error event
+
+### server.onSocketError(handler)
+* `handler`: &lt;Function> - The callback to handle client socket error event.
+
+Register callback handler for client socket error event
 
 ---
 ## FastMQ.Client.connect(channelName, path[, connectListener])
