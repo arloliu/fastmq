@@ -344,7 +344,7 @@ class Channel {
             debug(`addResponseListener topic: ${topic}, result: ${resMsg.payload.result}`);
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._requestEvent.removeAllListeners(topic);
-                this._internalEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
+                this._internalEvent.emit('error', new Error(`Register response listener for topic: ${topic} fail`));
             }
         });
         return this;
@@ -356,13 +356,18 @@ class Channel {
         }
 
         return new Promise((resolve, reject) => {
-            const msg = Message.create('push');
-            msg.setTopic(topic);
-            msg.setTarget(target);
-            msg.setPayload(items, contentType);
-            this._socket.write(msg.getBuffer(), 'utf8', () => {
-                resolve();
-            });
+            try {
+                const msg = Message.create('push');
+                msg.setTopic(topic);
+                msg.setSource(this.name);
+                msg.setTarget(target);
+                msg.setPayload(items, contentType);
+                this._socket.write(msg.getBuffer(), 'utf8', () => {
+                    resolve();
+                });
+            } catch (err) {
+                reject(err);
+            };
         });
     }
 
@@ -409,14 +414,19 @@ class Channel {
         }
 
         return new Promise((resolve, reject) => {
-            const msg = Message.create('pub');
-            msg.setTopic(topic);
-            msg.setTarget(target);
-            msg.setPayload(data, contentType);
+            try {
+                const msg = Message.create('pub');
+                msg.setTopic(topic);
+                msg.setSource(this.name);
+                msg.setTarget(target);
+                msg.setPayload(data, contentType);
 
-            this._socket.write(msg.getBuffer(), 'utf8', () => {
-                resolve();
-            });
+                this._socket.write(msg.getBuffer(), 'utf8', () => {
+                    resolve();
+                });
+            } catch (err) {
+                reject(err);
+            }
         });
     }
 

@@ -2,48 +2,48 @@
 > High performance message broker for node.js with multiple network transports support.
 
 **Table of Contents**
-- [FastMQ](#FastMQ)
-  - [Overview](#Overview)
-  - [Features](#Features)
-  - [Installation](#Installation)
-  - [Examples](#Examples)
-    - [Simple REQUEST/RESPONSE server and client](#Simple-REQUESTRESPONSE-server-and-client)
-    - [Simple REQUEST/RESPONSE pattern between two clients](#Simple-REQUESTRESPONSE-pattern-between-two-clients)
-    - [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#Simple-PUSHPULL-pattern-one-PUSH-two-PULL-workers)
-    - [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#Simple-PUBLISHSUBSCRIBE-pattern-one-PUBLISH-two-SUBSCRIBE-channels)
-- [API](#API)
-  - [FastMQ.Server.create(name)](#FastMQServercreatename)
-  - [FastMQ.Server.create(name, port[, host])](#FastMQServercreatename-port-host)
-  - [Class: FastMQ.Server](#Class-FastMQServer)
+- [FastMQ](#fastmq)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Examples](#examples)
+    - [Simple REQUEST/RESPONSE server and client](#simple-requestresponse-server-and-client)
+    - [Simple REQUEST/RESPONSE pattern between two clients](#simple-requestresponse-pattern-between-two-clients)
+    - [Simple PUSH/PULL pattern, one PUSH, two PULL workers](#simple-pushpull-pattern-one-push-two-pull-workers)
+    - [Simple PUBLISH/SUBSCRIBE pattern, one PUBLISH, two SUBSCRIBE channels](#simple-publishsubscribe-pattern-one-publish-two-subscribe-channels)
+- [API](#api)
+  - [FastMQ.Server.create(name)](#fastmqservercreatename)
+  - [FastMQ.Server.create(name, port[, host])](#fastmqservercreatename-port-host)
+  - [Class: FastMQ.Server](#class-fastmqserver)
     - [server.start()](#serverstart)
     - [server.stop()](#serverstop)
-    - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contentType--json)
+    - [server.request(target, topic, payload = {}, contentType = 'json')](#serverrequesttarget-topic-payload---contenttype--json)
     - [server.response(topic, listener)](#serverresponsetopic-listener)
-    - [server.onError(handler)](#serveronErrorhandler)
-    - [server.onSocketError(handler)](#serveronSocketErrorhandler)
-  - [FastMQ.Client.connect(channelName, path[, connectListener])](#FastMQClientconnectchannelName-path-connectListener)
-  - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#FastMQClientconnectchannelName-port-host-connectListener)
-  - [FastMQ.Client.connect(channelName, options[, connectListener])](#FastMQClientconnectchannelName-options-connectListener)
-  - [Class: FastMQ.Channel](#Class-FastMQChannel)
-    - [channel.onError(listener)](#channelonErrorlistener)
-    - [channel.onReconnect(listener)](#channelonReconnectlistener)
+    - [server.onError(handler)](#serveronerrorhandler)
+    - [server.onSocketError(handler)](#serveronsocketerrorhandler)
+  - [FastMQ.Client.connect(channelName, path[, connectListener])](#fastmqclientconnectchannelname-path-connectlistener)
+  - [FastMQ.Client.connect(channelName, port[, host][, connectListener])](#fastmqclientconnectchannelname-port-host)
+  - [FastMQ.Client.connect(channelName, options[, connectListener])](#fastmqclientconnectchannelname-options-connectlistener)
+  - [Class: FastMQ.Channel](#class-fastmqchannel)
+    - [channel.onError(listener)](#channelonerrorlistener)
+    - [channel.onReconnect(listener)](#channelonreconnectlistener)
     - [channel.disconnect(graceful)](#channeldisconnectgraceful)
-    - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contentType--json)
+    - [channel.request(target, topic, data = {}, contentType = 'json')](#channelrequesttarget-topic-data---contenttype--json)
     - [channel.response(topic, listener)](#channelresponsetopic-listener)
-    - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contentType--json)
+    - [channel.push(target, topic, items, contentType = 'json')](#channelpushtarget-topic-items-contenttype--json)
     - [channel.pull(topic, options, listener)](#channelpulltopic-options-listener)
-    - [channel.publish(target, topic, payload, contentType = 'json')](#channelpublishtarget-topic-payload-contentType--json)
+    - [channel.publish(target, topic, payload, contentType = 'json')](#channelpublishtarget-topic-payload-contenttype--json)
       - [channel.subscribe(topic, listener)](#channelsubscribetopic-listener)
-      - [channel.getChannels(name[, type])](#channelgetChannelsname-type)
-      - [channel.watchChannels(name, callback)](#channelwatchChannelsname-callback)
-  - [Class: FastMQ.Message](#Class-FastMQMessage)
+      - [channel.getChannels(name[, type])](#channelgetchannelsname-type)
+      - [channel.watchChannels(name, callback)](#channelwatchchannelsname-callback)
+  - [Class: FastMQ.Message](#class-fastmqmessage)
     - [message.header](#messageheader)
     - [message.payload](#messagepayload)
-    - [message.setError(code)](#messagesetErrorcode)
-    - [message.isError(value)](#messageisErrorvalue)
-  - [Class: FastMQ.Response](#Class-FastMQResponse)
-    - [response.send(payload, contentType)](#responsesendpayload-contentType)
-  - [List of Error Codes](#List-of-Error-Codes)
+    - [message.setError(code)](#messageseterrorcode)
+    - [message.isError(value)](#messageiserrorvalue)
+  - [Class: FastMQ.Response](#class-fastmqresponse)
+    - [response.send(payload, contentType)](#responsesendpayload-contenttype)
+  - [List of Error Codes](#list-of-error-codes)
 
 ## Overview
 FastMQ is a node.js based message broker aims to let programmer easy to commuicate between different processes or machines.
@@ -641,8 +641,8 @@ An &lt;Object> contains information of message, the common parameters are listed
 * id: &lt;Number> - unique message id.
 * type: &lt;string> - the type of message, possible values: 'req', 'res', 'push', 'pull', 'pub', 'sub'.
 * contentType: &lt;string> - the type of payload, possible values: 'json', 'raw', 'string'.
-* source: &lt;string> - the source channel of message, only avails on request/response message.
-* target: &lt;string> - the target channel of message, avails on all messages except ack. message.
+* source: &lt;string> - the source channel name of message, avails on all messages except ack. message.
+* target: &lt;string> - the target channel name of message, avails on all messages except ack. message.
 * error: &lt;Number> - the response error code, avails on response message.
 
 
