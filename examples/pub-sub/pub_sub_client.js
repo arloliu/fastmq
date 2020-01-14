@@ -27,14 +27,14 @@ async function test() {
     pubChannel1 = await FastMQ.Client.connect('pubChannel1', connectOption);
 
     subChannel1.subscribe('testPubSub', (msg) => {
-        console.log(`# ${subChannel1.name}, msg.id: ${msg.header.id}, payload:`, msg.payload);
+        console.log(`# ${subChannel1.name}, msg.id: ${msg.header.id}, header: ${JSON.stringify(msg.header)}, payload:`, msg.payload);
         const message = msg.payload.message;
         if (message < 1 || message > 30) {
             throw new Error('subChannel1 subscribe invalid');
         }
     });
     subChannel2.subscribe('testPubSub', (msg) => {
-        console.log(`# ${subChannel2.name}, msg.id: ${msg.header.id}, payload:`, msg.payload);
+        console.log(`# ${subChannel2.name}, msg.id: ${msg.header.id}, header: ${JSON.stringify(msg.header)}, payload:`, msg.payload);
         const message = msg.payload.message;
         if (message > 20 && message <= 30) {
             throw new Error('subChannel2 subscribe invalid');

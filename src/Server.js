@@ -108,10 +108,10 @@ class Server {
             }
         } else if (msg.isPush()) {
             // Push message
-            this._queueManager.processPushTasks(header.target, header.topic, msg.items, header.contentType);
+            this._queueManager.processPushTasks(header.target, header.topic, header.source, msg.items, header.contentType);
         } else if (msg.isPublish()) {
             // Publish message
-            this._queueManager.processPublishTask(header.target, header.topic, msg.payloadBuf, header.contentType);
+            this._queueManager.processPublishTask(header.target, header.topic, header.source, msg.payloadBuf, header.contentType);
         } else if (msg.isAck()) {
             // Acknowledge message
             this._queueManager.handleAck(msg);

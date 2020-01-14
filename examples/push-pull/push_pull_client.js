@@ -25,7 +25,7 @@ function pushItems(channel) {
 Promise.resolve()
     .then(() => {
         // console.log('Message broker server started.');
-        return FastMQ.Client.connect('pullChannel.1', serverChannel);
+        return FastMQ.Client.connect('pullChannel.#', serverChannel);
     })
     .then((ch) => {
         pullChannel1 = ch;
@@ -35,22 +35,22 @@ Promise.resolve()
         });
     })
     .then(() => {
-        return FastMQ.Client.connect('pullChannel.2', serverChannel);
+        return FastMQ.Client.connect('pullChannel.#', serverChannel);
     })
     .then((ch) => {
         pullChannel2 = ch;
         console.log('push_client2 connected.');
         pullChannel2.pull('testPushPullTopic', { prefetch: 3 }, (msg) => {
-            console.log(`# pullChannel2, msg.id: ${msg.header.id}, payload:`, msg.payload);
+            console.log(`# pullChannel2, msg.id: ${msg.header.id}, source: ${msg.header.source} payload:`, msg.payload);
             return Promise.resolve();
         });
     })
     .then(() => {
-        return FastMQ.Client.connect('pushChannel', serverChannel);
+        return FastMQ.Client.connect('pushChannel.#', serverChannel);
     })
     .then((ch) => {
         pushChannel = ch;
-        pushItemsId = setInterval(pushItems, 300, pushChannel);
+        pushItemsId = setInterval(pushItems, 10, pushChannel);
     })
     .catch((err) => {
         console.log('Got rejection:', err.stack);
