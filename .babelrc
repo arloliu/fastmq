@@ -2,13 +2,12 @@
   "presets": [
     ["@babel/preset-env", {
         "targets": {
-            "node": "10.0.0",
+            "node": "10.0.0"
         }
     }]
   ],
   "plugins": [
     "@babel/plugin-transform-template-literals",
-    "@babel/plugin-transform-async-to-generator",
     "@babel/plugin-transform-modules-commonjs",
     "@babel/plugin-transform-runtime"
   ]

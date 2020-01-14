@@ -1,6 +1,9 @@
 'use strict';
-const promiseImpl = require('bluebird');
-global.Promise = promiseImpl;
+const semver = require('semver');
+const majorVer = semver.major(process.version);
+if (majorVer < 12) {
+    global.Promise = require('bluebird');
+}
 
 const _ = require('lodash');
 const net = require('net');
@@ -268,7 +271,6 @@ class Channel {
                 if (_.isString(msg.payload.channelName)) {
                     this.name = msg.payload.channelName;
                 }
-                return this;
             }
         });
     }
@@ -388,7 +390,7 @@ class Channel {
             });
         });
 
-        return this._serverRequest('addPullListener', regPayload, 'json').then((resMsg) => {
+        this._serverRequest('addPullListener', regPayload, 'json').then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._pullEvent.removeAllListeners(topic);
                 this._internalEvent.emit('error', new Error(`Register pull listener for topic: ${topic} fail`));
@@ -399,8 +401,8 @@ class Channel {
                     listener: listener,
                 });
             }
-            return this;
         });
+        return this;
     }
 
     publish(target, topic, data, contentType = 'json') {
@@ -441,7 +443,7 @@ class Channel {
             listener(msg);
         });
 
-        return this._serverRequest('addSubscribeListener', regPayload, 'json').then((resMsg) => {
+        this._serverRequest('addSubscribeListener', regPayload, 'json').then((resMsg) => {
             if (resMsg.isError('REGISTER_FAIL')) {
                 this._subEvent.removeAllListeners(topic);
                 this._internalEvent.emit('error', new Error(`Register subscribe listener for topic: ${topic} fail`));
@@ -451,8 +453,8 @@ class Channel {
                     listener: listener,
                 });
             }
-            return this;
         });
+        return this;
     }
 
     _sendAck(id, topic) {

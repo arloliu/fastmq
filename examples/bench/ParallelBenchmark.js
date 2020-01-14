@@ -1,6 +1,6 @@
-const Aigle = require('bluebird');
-global.Promise = Aigle;
-const Promise = Aigle;
+// const Aigle = require('bluebird');
+// global.Promise = Aigle;
+// const Promise = Aigle;
 
 const EventEmitter = require('events');
 class ParallelBenchmark extends EventEmitter {

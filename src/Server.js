@@ -1,6 +1,9 @@
 'use strict';
-const promiseImpl = require('bluebird');
-global.Promise = promiseImpl;
+const semver = require('semver');
+const majorVer = semver.major(process.version);
+if (majorVer < 12) {
+    global.Promise = require('bluebird');
+}
 
 const _ = require('lodash');
 const net = require('net');

@@ -1,6 +1,3 @@
-const promiseImpl = require('bluebird');
-global.Promise = promiseImpl;
-
 const FastMQ = require('../../lib/index.js');
 const ParallelBenchmark = require('./ParallelBenchmark');
 const parseArgs = require('minimist');
