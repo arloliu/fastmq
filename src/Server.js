@@ -178,7 +178,7 @@ class Server {
                 res.setError(ErrorCode.REGISTER_FAIL);
             }
 
-            const queue = this._queueManager.get('pull', payload.topic);
+            const queue = this._queueManager.getTaskQueue('pull', payload.topic);
             queue.addChannel(channel);
 
             res.send({ result: channel ? true : false }, 'json');
@@ -192,7 +192,7 @@ class Server {
                 res.setError(ErrorCode.REGISTER_FAIL);
             }
 
-            const queue = this._queueManager.get('sub', payload.topic);
+            const queue = this._queueManager.getTaskQueue('sub', payload.topic);
             queue.addChannel(channel);
 
             res.send({ result: channel ? true : false }, 'json');

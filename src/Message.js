@@ -1,8 +1,9 @@
 'use strict';
+/* eslint-disable no-use-before-define */
 const Int64 = require('node-int64');
 const generateUuid = require('./common').uuid;
-const BufferStream = require('./BufferStream');
 const ErrorCode = require('./ErrorCode');
+const BufferPlus = require('buffer-plus');
 const MSG_TYPE = {
     req: 1,
     res: 2,
@@ -40,7 +41,25 @@ ContentType {
     json: 2,
     string: 3
 }
+*/
 
+BufferPlus.addCustomType('type', (buffer) => {
+    return getMessageTypeKey(buffer.readUInt8());
+}, (buffer, value) => {
+    buffer.writeUInt8(MSG_TYPE[value]);
+}, (value) => {
+    return 1;
+});
+
+BufferPlus.addCustomType('contentType', (buffer) => {
+    return getContentType(buffer.readUInt8());
+}, (buffer, value) => {
+    buffer.writeUInt8(MSG_CONTENT_TYPE[value]);
+}, (value) => {
+    return 1;
+});
+
+/*
 RequestHeader & ResponseHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
@@ -53,7 +72,22 @@ RequestHeader & ResponseHeader {
     targetLen:   uint8, source length
     target:      <targetLen> bytes, string, target channel's name
 }
+*/
+BufferPlus.createSchema('RequestResponseHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+        error: {type: 'uint8'},
+        topic: {type: 'string'},
+        source: {type: 'string'},
+        target: {type: 'string'},
+    },
+    order: ['id', 'type', 'contentType', 'error', 'topic', 'source', 'target'],
+});
 
+/*
 PublishHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
@@ -65,7 +99,20 @@ PublishHeader {
     targetLen:   uint8, source length
     target:      <targetLen> bytes, string, target channel's name
 }
-
+*/
+BufferPlus.createSchema('PublishHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+        topic: {type: 'string'},
+        source: {type: 'string'},
+        target: {type: 'string'},
+    },
+    order: ['id', 'type', 'contentType', 'topic', 'source', 'target'],
+});
+/*
 SubscribeHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
@@ -75,7 +122,19 @@ SubscribeHeader {
     sourceLen:   uint8, source length
     source:      <sourceLen> bytes, string, source channel's name
 }
-
+*/
+BufferPlus.createSchema('SubscribeHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+        topic: {type: 'string'},
+        source: {type: 'string'},
+    },
+    order: ['id', 'type', 'contentType', 'topic', 'source'],
+});
+/*
 PushHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
@@ -88,7 +147,22 @@ PushHeader {
     target:      <targetLen> bytes, string, target channel's name
     itemCount:   uint32, number of items in payload
 }
+*/
+BufferPlus.createSchema('PushHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+        topic: {type: 'string'},
+        source: {type: 'string'},
+        target: {type: 'string'},
+        itemCount: {type: 'uint32be'},
+    },
+    order: ['id', 'type', 'contentType', 'topic', 'source', 'target', 'itemCount'],
+});
 
+/*
 PullHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
@@ -98,26 +172,64 @@ PullHeader {
     sourceLen:   uint8, source length
     source:      <sourceLen> bytes, string, source channel's name
 }
+*/
+BufferPlus.createSchema('PullHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+        topic: {type: 'string'},
+        source: {type: 'string'},
+    },
+    order: ['id', 'type', 'contentType', 'topic', 'source'],
+});
 
+/*
 AckHeader {
     id:          uint64, message id of PullHeader.id
     type:        uint8, message type, valid value: <MessageType>
     topicLen:    uint8, topic length
     topic:       <topicLen> bytes, string, message topic
 }
+*/
+BufferPlus.createSchema('AckHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        topic: {type: 'string'},
+    },
+    order: ['id', 'type', 'topic'],
+});
 
+/*
 MonitorHeader {
     id:          uint64, unique message id
     type:        uint8, message type, valid value: <MessageType>
     contentType: uint8, Number, valid value: <ContentType>
 }
+*/
+BufferPlus.createSchema('MonitorHeader', {
+    type: 'object',
+    properties: {
+        id: {type: 'uint64be'},
+        type: {type: 'custom', name: 'type'},
+        contentType: {type: 'custom', name: 'contentType'},
+    },
+    order: ['id', 'type', 'contentType'],
+});
 
-
+/*
 PushPayloadItem {
     length: uint32, item length
     item: binary, depends PushHeader.contentType
 }
 */
+
+
+const bp = BufferPlus.allocUnsafe(4096);
+
 function isIterable(obj) {
     if (obj === null || obj === undefined) {
         return false;
@@ -249,6 +361,11 @@ class Message {
         this.payloadBuf = buf;
     }
 
+    fillPayload(buf) {
+        this.payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
+        this.payload = parsePayloadBuffer(this.payloadBuf, this.header.contentType);
+    }
+
     getBuffer() {
         const headerBuf = this._getHeaderBuffer();
         this.headerLength = headerBuf.length;
@@ -305,42 +422,17 @@ class RequestMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-        this.header.error = headerBufStream.readUInt8();
-
-        this.header.topic = headerBufStream.readHeaderString();
-        this.header.source = headerBufStream.readHeaderString();
-        this.header.target = headerBufStream.readHeaderString();
-
-        this.payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        this.payload = parsePayloadBuffer(this.payloadBuf, this.header.contentType);
-
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('RequestResponseHeader');
+        this.fillPayload(buf);
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const sourceLen = Buffer.byteLength(header.source, 'utf8');
-        const targetLen = Buffer.byteLength(header.target, 'utf8');
-        const headerLen = 14 + topicLen + sourceLen + targetLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-        bufStream.writeUInt8(header.error || 0);
-        bufStream.writeHeaderString(header.topic, topicLen);
-        bufStream.writeHeaderString(header.source, sourceLen);
-        bufStream.writeHeaderString(header.target, targetLen);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('RequestResponseHeader', header);
+        return bp.toBuffer();
     }
 
     // helper methods
@@ -391,37 +483,17 @@ class PublishMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-        this.header.topic = headerBufStream.readHeaderString();
-        this.header.source = headerBufStream.readHeaderString();
-        this.header.target = headerBufStream.readHeaderString();
-
-        this.payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        // this.payload = parsePayloadBuffer(this.payloadBuf, this.header.contentType);
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('PublishHeader');
+        this.fillPayload(buf);
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const sourceLen = Buffer.byteLength(header.source, 'utf8');
-        const targetLen = Buffer.byteLength(header.target, 'utf8');
-        const headerLen = 13 + topicLen + sourceLen + targetLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-        bufStream.writeHeaderString(header.topic, topicLen);
-        bufStream.writeHeaderString(header.source, sourceLen);
-        bufStream.writeHeaderString(header.target, targetLen);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('PublishHeader', header);
+        return bp.toBuffer();
     }
 
     setTopic(topic) {
@@ -442,35 +514,17 @@ class SubscribeMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-        this.header.topic = headerBufStream.readHeaderString();
-        this.header.source = headerBufStream.readHeaderString();
-
-        this.payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        this.payload = parsePayloadBuffer(this.payloadBuf, this.header.contentType);
-
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('SubscribeHeader');
+        this.fillPayload(buf);
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const sourceLen = Buffer.byteLength(header.source, 'utf8');
-        const headerLen = 12 + topicLen + sourceLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-        bufStream.writeHeaderString(header.topic, topicLen);
-        bufStream.writeHeaderString(header.source, sourceLen);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('SubscribeHeader', header);
+        return bp.toBuffer();
     }
 
     setSource(source) {
@@ -491,27 +545,26 @@ class PushMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-        this.header.topic = headerBufStream.readHeaderString();
-        this.header.source = headerBufStream.readHeaderString();
-        this.header.target = headerBufStream.readHeaderString();
-        this.header.itemCount = headerBufStream.readUInt32BE();
-
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('PushHeader');
         const payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        // No need to parse payload
-        // this._parsePayloadBuffer(payloadBuf, this.header.contentType);
         // split payload to item array.
         this.items = this._splitPayloadToItems(payloadBuf);
+
         return this;
+    }
+
+    _getHeaderBuffer() {
+        const header = this.header;
+        bp.reset();
+        bp.writeSchema('PushHeader', header);
+        return bp.toBuffer();
     }
 
     _splitPayloadToItems(payloadBuf) {
         const itemCount = this.header.itemCount;
         const payloadSize = payloadBuf.length;
-        const bufStream = new BufferStream(payloadBuf);
+        const bufStream = BufferPlus.from(payloadBuf);
         const items = [];
         for (let i = 0; i < itemCount; i++) {
             const itemLen = bufStream.readUInt32BE();
@@ -522,68 +575,6 @@ class PushMessage extends Message {
             items.push(itemBuf);
         }
         return items;
-    }
-
-    _parsePayloadBuffer(payloadBuf, contentType) {
-        const itemCount = this.header.itemCount;
-        const payloadSize = payloadBuf.length;
-        const bufStream = new BufferStream(payloadBuf);
-
-        const payload = [];
-        if (contentType === 'raw') {
-            for (let i = 0; i < itemCount; i++) {
-                const itemLen = bufStream.readUInt32BE();
-                if (bufStream.offset + itemLen > payloadSize) {
-                    throw new RangeError('Payload buffer is smaller than expected.');
-                }
-                const itemBuf = bufStream.readBuffer(itemLen);
-                payload.push(itemBuf);
-            }
-        } else if (contentType === 'json') {
-            if (itemCount < 1 || payloadBuf.length === 0) {
-                return;
-            }
-
-            for (let i = 0; i < itemCount; i++) {
-                const itemLen = bufStream.readUInt32BE();
-                if (bufStream.offset + itemLen > payloadSize) {
-                    throw new RangeError('Payload buffer is smaller than expected.');
-                }
-                const itemBuf = bufStream.readBuffer(itemLen);
-                payload.push(JSON.parse(itemBuf.toString('utf8')));
-            }
-        } else {
-            for (let i = 0; i < itemCount; i++) {
-                const itemLen = bufStream.readUInt32BE();
-                if (bufStream.offset + itemLen > payloadSize) {
-                    throw new RangeError('Payload buffer is smaller than expected.');
-                }
-                const itemBuf = bufStream.readBuffer(itemLen);
-                payload.push(itemBuf.toString('utf8'));
-            }
-        }
-        this.payload = payload;
-    }
-
-    _getHeaderBuffer() {
-        const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const sourceLen = Buffer.byteLength(header.source, 'utf8');
-        const targetLen = Buffer.byteLength(header.target, 'utf8');
-        const headerLen = 17 + topicLen + sourceLen + targetLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-        bufStream.writeHeaderString(header.topic, topicLen);
-        bufStream.writeHeaderString(header.source, sourceLen);
-        bufStream.writeHeaderString(header.target, targetLen);
-        bufStream.writeUInt32BE(header.itemCount);
-
-        return bufStream.get();
     }
 
     _getPayloadBuffer() {
@@ -678,34 +669,17 @@ class PullMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-        this.header.topic = headerBufStream.readHeaderString();
-        this.header.source = headerBufStream.readHeaderString();
-
-        const payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        this.payload = parsePayloadBuffer(payloadBuf, this.header.contentType);
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('PullHeader');
+        this.fillPayload(buf);
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const sourceLen = Buffer.byteLength(header.source, 'utf8');
-        const headerLen = 12 + topicLen + sourceLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-        bufStream.writeHeaderString(header.topic, topicLen);
-        bufStream.writeHeaderString(header.source, sourceLen);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('PullHeader', header);
+        return bp.toBuffer();
     }
 
     setSource(source) {
@@ -725,27 +699,16 @@ class AckMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.topic = headerBufStream.readHeaderString();
-
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('AckHeader');
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const topicLen = Buffer.byteLength(header.topic, 'utf8');
-        const headerLen = 10 + topicLen;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeHeaderString(header.topic, topicLen);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('AckHeader', header);
+        return bp.toBuffer();
     }
 
     setTopic(topic) {
@@ -760,28 +723,17 @@ class MonitorMessage extends Message {
 
     createFromBuffer(buf) {
         const headerBuf = buf.slice(8, 8 + this.headerLength);
-        const headerBufStream = new BufferStream(headerBuf);
-
-        headerBufStream.offset = 9;
-        this.header.contentType = getContentType(headerBufStream.readUInt8());
-
-        const payloadBuf = buf.slice(8 + this.headerLength, this.messageLength);
-        this.payload = parsePayloadBuffer(payloadBuf, this.header.contentType);
+        const bufStream = BufferPlus.from(headerBuf);
+        this.header = bufStream.readSchema('MonitorHeader');
+        this.fillPayload(buf);
         return this;
     }
 
     _getHeaderBuffer() {
         const header = this.header;
-
-        const headerLen = 10;
-        const headerBuf = Buffer.alloc(headerLen);
-
-        const bufStream = new BufferStream(headerBuf);
-        bufStream.writeUInt64BE(header.id);
-        bufStream.writeUInt8(MSG_TYPE[header.type]);
-        bufStream.writeUInt8(MSG_CONTENT_TYPE[header.contentType]);
-
-        return bufStream.get();
+        bp.reset();
+        bp.writeSchema('MonitorHeader', header);
+        return bp.toBuffer();
     }
 }
 

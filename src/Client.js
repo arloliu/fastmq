@@ -12,9 +12,22 @@ const Message = require('./Message.js');
 const Response = require('./Response.js');
 const MessageReceiver = require('./MessageReceiver.js');
 const util = require('util');
-const common = require('./common.js');
-const getSocketPath = common.getSocketPath;
+const {getSocketPath} = require('./common.js');
 const debug = util.debuglog('fastmq');
+
+function isThenable(object) {
+    return (object && typeof object.then === 'function') ? true : false;
+}
+
+function wrapThenable(thenable, response) {
+    thenable.then((payload) => {
+        if (payload !== undefined || response.sent === false) {
+            response.send(payload);
+        }
+    }, (err) => {
+        debug('Response got error:', err);
+    });
+}
 
 class Channel {
     constructor(channelName, options) {
@@ -339,7 +352,10 @@ class Channel {
 
     response(topic, listener) {
         this._requestEvent.on(topic, (reqMsg, res) => {
-            listener(reqMsg, res);
+            const result = listener(reqMsg, res);
+            if (isThenable(result)) {
+                wrapThenable(result, res);
+            }
         });
         // register this request listener to server
         this._serverRequest('addResponseListener', { topic: topic }, 'json').then((resMsg) => {

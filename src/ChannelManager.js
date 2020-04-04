@@ -1,7 +1,6 @@
 'use strict';
-const globToRegExp = require('glob-to-regexp');
-const util = require('util');
-const debug = util.debuglog('fastmq');
+const getChannelRegex = require('./common').getChannelRegex;
+const debug = require('util').debuglog('fastmq');
 const Message = require('./Message.js');
 
 function getRandomInt(min, max) {
@@ -22,7 +21,7 @@ class ChannelManager {
     }
 
     contains(pattern) {
-        const re = (pattern instanceof RegExp) ? pattern : globToRegExp(pattern);
+        const re = getChannelRegex(pattern);
         for (const key in this._channels) {
             if (re.test(key)) {
                 return true;
@@ -137,7 +136,7 @@ class ChannelManager {
             return false;
         }
 
-        const regex = (channelName instanceof RegExp) ? channelName : globToRegExp(channelName);
+        const regex = getChannelRegex(channelName);
         const key = regex.source;
         const availChannels = this._monitorChannels.get(key);
 
@@ -169,7 +168,7 @@ class ChannelManager {
     }
 
     findChannelNames(pattern) {
-        const re = (pattern instanceof RegExp) ? pattern : globToRegExp(pattern);
+        const re = getChannelRegex(pattern);
 
         const channelNames = [];
         for (const key in this._channels) {
@@ -182,7 +181,7 @@ class ChannelManager {
     }
 
     find(pattern) {
-        const re = (pattern instanceof RegExp) ? pattern : globToRegExp(pattern);
+        const re = getChannelRegex(pattern);
         const cacheKey = re.source;
         debug(`Find cacheKey: ${cacheKey}`);
         const cache = this._channelCache.get(cacheKey);

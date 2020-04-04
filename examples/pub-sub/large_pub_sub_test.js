@@ -18,7 +18,7 @@ const argv = require('minimist')(process.argv.slice(2), {
         'sub_ch': 100,
         'pub_ch': 10,
         'loop': 200,
-        'tcp': false,
+        'tcp': true,
         'msg_count': 10,
         'forever': false,
         'help': false,

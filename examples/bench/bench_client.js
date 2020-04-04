@@ -4,6 +4,7 @@ const parseArgs = require('minimist');
 const options = parseArgs(process.argv.slice(2));
 const Parallel = options.p || 10;
 const Requests = options.n || 1000;
+const _ = require('lodash');
 
 const bench1 = new ParallelBenchmark('test_cmd_json', {
     parallel: Parallel,
@@ -36,6 +37,9 @@ const bench2 = new ParallelBenchmark('test_cmd_raw_1k', {
     requests: Requests,
     setup: function() {
         this.rawData = Buffer.allocUnsafe(1024);
+        for (let i = 0; i < 1024; i++) {
+            this.rawData[i] = _.random(0, 255, false);
+        }
         return FastMQ.Client.connect('client1', 'master').then((ch) => {
             this.channel = ch;
         });
@@ -62,6 +66,9 @@ const bench3 = new ParallelBenchmark('test_cmd_raw_64kb', {
     requests: Requests,
     setup: function() {
         this.rawData = Buffer.allocUnsafe(64);
+        for (let i = 0; i < 64; i++) {
+            this.rawData[i] = _.random(0, 255, false);
+        }
         return FastMQ.Client.connect('client2', 'master').then((ch) => {
             this.channel = ch;
         });

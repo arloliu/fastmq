@@ -10,13 +10,21 @@ let itemCount = 0;
 function pushItems(channel) {
     const data = [];
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 500; i++) {
         itemCount++;
         data.push({ data: `item${itemCount}` });
     }
     channel.push('pullChannel.*', 'testPushPullTopic', data);
-    if (itemCount > 10000) {
-        process.emit('SIGINT');
+    if (itemCount > 100000) {
+        console.log('Finish PUSH');
+        if (pushItemsId) {
+            clearInterval(pushItemsId);
+            pushItemsId = null;
+        }
+
+        setTimeout(() => {
+            process.emit('SIGINT');
+        }, 2000);
     }
 }
 
@@ -30,7 +38,7 @@ Promise.resolve()
     .then((ch) => {
         pullChannel1 = ch;
         console.log('push_client1 connected.');
-        return pullChannel1.pull('testPushPullTopic', { prefetch: 2 }, (msg) => {
+        return pullChannel1.pull('testPushPullTopic', { prefetch: 10 }, (msg) => {
             console.log(`# pullChannel1, msg.id: ${msg.header.id}, payload:`, msg.payload);
         });
     })
@@ -40,7 +48,7 @@ Promise.resolve()
     .then((ch) => {
         pullChannel2 = ch;
         console.log('push_client2 connected.');
-        pullChannel2.pull('testPushPullTopic', { prefetch: 3 }, (msg) => {
+        pullChannel2.pull('testPushPullTopic', { prefetch: 10 }, (msg) => {
             console.log(`# pullChannel2, msg.id: ${msg.header.id}, source: ${msg.header.source} payload:`, msg.payload);
             return Promise.resolve();
         });
@@ -65,6 +73,7 @@ process.on('SIGINT', () => {
     console.log('Finished.');
     if (pushItemsId) {
         clearInterval(pushItemsId);
+        pushItemsId = null;
     }
     pullChannel1.disconnect();
     pullChannel2.disconnect();

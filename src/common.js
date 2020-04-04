@@ -1,7 +1,8 @@
 'use strict';
 const path = require('path');
 const os = require('os');
-
+const isRegex = require('is-regex');
+const globToRegExp = require('glob-to-regexp');
 exports.toNumber = function(x) {
     const value = Number(x);
     return value >= 0 ? x : false;
@@ -51,3 +52,19 @@ function uniqid(prefix) {
     return (prefix || '') + address + pidStr + uuid().toString(36);
 }
 exports.uniqid = uniqid;
+
+function getChannelRegex(syntax) {
+    if (isRegex(syntax)) {
+        return syntax;
+    }
+    return globToRegExp(syntax);
+}
+exports.getChannelRegex = getChannelRegex;
+
+function sanitizeTarget(target) {
+    if (isRegex(target)) {
+        return target.toString();
+    }
+    return target;
+}
+module.exports.sanitizeTarget = sanitizeTarget;

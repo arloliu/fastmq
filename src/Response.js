@@ -5,6 +5,7 @@ class Response {
     constructor(reqMsg, socket) {
         this._reqMsg = reqMsg;
         this.socket = socket;
+        this.sent = false;
         this._msg = Message.create('res', reqMsg.header.id);
 
         // swap target and source, fill topic and contentType
@@ -44,6 +45,7 @@ class Response {
         }
         this._msg.setPayload(data);
         this.socket.write(this._msg.getBuffer());
+        this.sent = true;
     }
 }
 
