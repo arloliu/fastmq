@@ -124,7 +124,7 @@ class Channel {
             this._socket.on('error', (err) => {
                 this._needReconnect = true;
                 this._internalEvent.emit('error', err);
-                if (!this._connected && !this._options.reconnect) {
+                if (!this._connected) {
                     reject(err);
                 }
             });
@@ -193,6 +193,8 @@ class Channel {
             debug('reconnect, interval:', this._options.reconnectInterval);
             this.connect(true).then(() => {
                 this._internalEvent.emit('reconnect');
+            }, (err) => {
+                debug('reconnect reject:', err);
             });
         }, this._options.reconnectInterval);
     }
