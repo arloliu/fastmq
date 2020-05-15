@@ -155,17 +155,16 @@ class Channel {
 
                     if (cbStyle) {
                         this._options.connectListener(null, this);
-                    } else {
-                        resolve(this);
                     }
+                    resolve(this);
                 })
                 .catch((err) => {
                     if (cbStyle) {
                         this._options.connectListener(err, this);
                     } else {
                         debug('connect reject:', err);
-                        reject(err);
                     }
+                    reject(err);
                 });
             });
 
